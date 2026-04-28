@@ -263,6 +263,29 @@ def lti_launch(activity_id):
     return redirect(row['login_url'] + '?' + params)
 
 
+@app.route('/lti/launch_detail/<int:activity_id>/<int:target_user_id>')
+@login_required
+def lti_launch_detail(activity_id, target_user_id):
+    db  = get_db()
+    row = db.execute(
+        'SELECT a.*, t.login_url, t.client_id, t.target_link_uri '
+        'FROM activities a JOIN lti_tools t ON a.tool_id=t.id WHERE a.id=?',
+        [activity_id]
+    ).fetchone()
+    if not row:
+        return 'Activity not found', 404
+
+    iss = request.host_url.rstrip('/')
+    params = urllib.parse.urlencode({
+        'iss':               iss,
+        'login_hint':        str(session['user_id']),
+        'lti_message_hint':  f'detail:{activity_id}:{target_user_id}',
+        'target_link_uri':   row['target_link_uri'],
+        'client_id':         row['client_id'],
+    })
+    return redirect(row['login_url'] + '?' + params)
+
+
 # ── LTI 1.3 Launch: Step 3 — OIDC authorization endpoint ─────────────────────
 
 @app.route('/lti/oidc/auth')
@@ -282,45 +305,74 @@ def oidc_auth():
     if tool['redirect_uri'] != redirect_uri:
         return 'redirect_uri mismatch', 400
 
-    activity_id = int(lti_message_hint)
-    activity    = db.execute('SELECT * FROM activities WHERE id=?', [activity_id]).fetchone()
+    is_detail     = lti_message_hint.startswith('detail:')
+    if is_detail:
+        _, activity_id_str, target_user_id_str = lti_message_hint.split(':')
+        activity_id    = int(activity_id_str)
+        target_sub     = target_user_id_str
+        target_user    = db.execute('SELECT * FROM users WHERE id=?', [target_sub]).fetchone()
+        target_name    = target_user['username'] if target_user else 'Unknown'
+    else:
+        activity_id = int(lti_message_hint)
+        target_sub  = login_hint
+        target_name = session['username']
 
-    # Ensure lineitem exists
-    li = db.execute('SELECT * FROM lineitems WHERE activity_id=?', [activity_id]).fetchone()
-    if not li:
-        db.execute('INSERT INTO lineitems (activity_id, label) VALUES (?, ?)',
-                   [activity_id, activity['name']])
-        db.commit()
+    activity = db.execute('SELECT * FROM activities WHERE id=?', [activity_id]).fetchone()
+    iss      = request.host_url.rstrip('/')
+    config   = db.execute('SELECT * FROM platform_config WHERE id=1').fetchone()
+
+    if is_detail:
+        return_url = iss + f'/courses/{activity["course_id"]}'
+        id_token = make_id_token(
+            private_pem=config['private_key_pem'],
+            kid=config['kid'],
+            iss=iss,
+            aud=client_id,
+            sub=target_sub,
+            nonce=nonce,
+            deployment_id=tool['deployment_id'],
+            resource_link_id=activity['resource_link_id'],
+            resource_link_title=activity['name'],
+            context_id=str(activity['course_id']),
+            user_name=target_name,
+            target_link_uri=tool['target_link_uri'],
+            return_url=return_url,
+            custom_params={'view': 'detail'},
+        )
+    else:
+        # Ensure lineitem exists
         li = db.execute('SELECT * FROM lineitems WHERE activity_id=?', [activity_id]).fetchone()
+        if not li:
+            db.execute('INSERT INTO lineitems (activity_id, label) VALUES (?, ?)',
+                       [activity_id, activity['name']])
+            db.commit()
+            li = db.execute('SELECT * FROM lineitems WHERE activity_id=?', [activity_id]).fetchone()
 
-    # Ensure grade row exists for this user+activity
-    db.execute(
-        'INSERT OR IGNORE INTO grades (user_id, activity_id, course_id) VALUES (?, ?, ?)',
-        [session['user_id'], activity_id, activity['course_id']]
-    )
-    db.commit()
+        # Ensure grade row exists for this user+activity
+        db.execute(
+            'INSERT OR IGNORE INTO grades (user_id, activity_id, course_id) VALUES (?, ?, ?)',
+            [session['user_id'], activity_id, activity['course_id']]
+        )
+        db.commit()
 
-    iss          = request.host_url.rstrip('/')
-    lineitem_url = iss + f'/lti/ags/lineitems/{li["id"]}'
-    return_url   = iss + f'/courses/{activity["course_id"]}'
-    config       = db.execute('SELECT * FROM platform_config WHERE id=1').fetchone()
-
-    id_token = make_id_token(
-        private_pem=config['private_key_pem'],
-        kid=config['kid'],
-        iss=iss,
-        aud=client_id,
-        sub=login_hint,               # user_id as string
-        nonce=nonce,
-        deployment_id=tool['deployment_id'],
-        resource_link_id=activity['resource_link_id'],
-        resource_link_title=activity['name'],
-        context_id=str(activity['course_id']),
-        user_name=session['username'],
-        target_link_uri=tool['target_link_uri'],
-        lineitem_url=lineitem_url,
-        return_url=return_url,
-    )
+        lineitem_url = iss + f'/lti/ags/lineitems/{li["id"]}'
+        return_url   = iss + f'/courses/{activity["course_id"]}'
+        id_token = make_id_token(
+            private_pem=config['private_key_pem'],
+            kid=config['kid'],
+            iss=iss,
+            aud=client_id,
+            sub=login_hint,
+            nonce=nonce,
+            deployment_id=tool['deployment_id'],
+            resource_link_id=activity['resource_link_id'],
+            resource_link_title=activity['name'],
+            context_id=str(activity['course_id']),
+            user_name=session['username'],
+            target_link_uri=tool['target_link_uri'],
+            lineitem_url=lineitem_url,
+            return_url=return_url,
+        )
     return render_template('oidc_response.html',
                            redirect_uri=redirect_uri,
                            id_token=id_token,

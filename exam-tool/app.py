@@ -242,10 +242,43 @@ def lti_launch():
     if dep_id != config['deployment_id']:
         return render_template('error.html', message='Unknown deployment_id.'), 400
 
-    rl  = claims.get('https://purl.imsglobal.org/spec/lti/claim/resource_link', {})
-    ctx = claims.get('https://purl.imsglobal.org/spec/lti/claim/context', {})
-    ags = claims.get('https://purl.imsglobal.org/spec/lti-ags/claim/endpoint', {})
-    lp  = claims.get('https://purl.imsglobal.org/spec/lti/claim/launch_presentation', {})
+    rl     = claims.get('https://purl.imsglobal.org/spec/lti/claim/resource_link', {})
+    ctx    = claims.get('https://purl.imsglobal.org/spec/lti/claim/context', {})
+    ags    = claims.get('https://purl.imsglobal.org/spec/lti-ags/claim/endpoint', {})
+    lp     = claims.get('https://purl.imsglobal.org/spec/lti/claim/launch_presentation', {})
+    custom = claims.get('https://purl.imsglobal.org/spec/lti/claim/custom', {})
+
+    if custom.get('view') == 'detail':
+        sub              = claims.get('sub')
+        resource_link_id = rl.get('id', '')
+        lti_sess = db.execute(
+            'SELECT * FROM lti_sessions WHERE sub=? AND resource_link_id=?',
+            [sub, resource_link_id]
+        ).fetchone()
+        if not lti_sess:
+            return render_template('error.html', message='No submission found for this user.'), 404
+        attempt = db.execute(
+            'SELECT * FROM attempts WHERE session_id=?', [lti_sess['session_id']]
+        ).fetchone()
+        if not attempt:
+            return render_template('error.html', message='No submission found for this user.'), 404
+        rows      = db.execute('SELECT * FROM questions').fetchall()
+        answers   = json.loads(attempt['answers'])
+        questions = []
+        for q in rows:
+            opts   = json.loads(q['options'])
+            chosen = answers.get(str(q['id']), -1)
+            questions.append({
+                'text':    q['text'],
+                'options': opts,
+                'chosen':  chosen,
+                'correct': q['answer'],
+            })
+        return render_template('detail.html',
+                               user_name=lti_sess['user_name'],
+                               score=attempt['score'],
+                               questions=questions,
+                               return_url=lp.get('return_url', ''))
 
     sess_id = uuid.uuid4().hex
     db.execute(

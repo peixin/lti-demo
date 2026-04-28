@@ -40,7 +40,7 @@ def public_key_to_jwk(public_pem, kid):
 def make_id_token(private_pem, kid, iss, aud, sub, nonce,
                   deployment_id, resource_link_id, resource_link_title,
                   context_id, user_name, target_link_uri,
-                  lineitem_url, return_url):
+                  lineitem_url=None, return_url=None, custom_params=None):
     """Build and sign LTI 1.3 id_token JWT."""
     now = int(time.time())
     claims = {
@@ -62,18 +62,22 @@ def make_id_token(private_pem, kid, iss, aud, sub, nonce,
             'id': context_id,
             'type': ['http://purl.imsglobal.org/vocab/lis/v2/course#CourseOffering'],
         },
-        'https://purl.imsglobal.org/spec/lti-ags/claim/endpoint': {
+    }
+    if lineitem_url:
+        claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint'] = {
             'scope': [
                 'https://purl.imsglobal.org/spec/lti-ags/scope/lineitem',
                 'https://purl.imsglobal.org/spec/lti-ags/scope/score',
             ],
             'lineitems': lineitem_url,
-            'lineitem': lineitem_url,
-        },
-        'https://purl.imsglobal.org/spec/lti/claim/launch_presentation': {
+            'lineitem':  lineitem_url,
+        }
+    if return_url:
+        claims['https://purl.imsglobal.org/spec/lti/claim/launch_presentation'] = {
             'return_url': return_url,
-        },
-    }
+        }
+    if custom_params:
+        claims['https://purl.imsglobal.org/spec/lti/claim/custom'] = custom_params
     return jwt.encode(claims, private_pem, algorithm='RS256',
                       headers={'kid': kid})
 

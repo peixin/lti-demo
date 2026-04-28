@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="box mb-4">
+  <div class="level mb-2">
+    <div class="level-left">
+      <div class="level-item">
+        <div>
+          <p class="title mb-0">Submission Detail</p>
+          <div>
+            <span class="subtitle is-6 has-text-grey mb-0">{{ user_name }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="level-right">
+      <div class="level-item">
+        {% set pct = (score * 100) | int %}
+        <span class="tag is-large {% if score >= 0.6 %}is-success{% else %}is-danger{% endif %}">
+          {{ pct }}% {% if score >= 0.6 %}Passed{% else %}Failed{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="box" style="overflow-x: auto">
+  <table class="table is-fullwidth is-striped is-hoverable is-size-7">
+    <thead>
+      <tr>
+        <th style="width:2rem">#</th>
+        <th>Question</th>
+        <th>Your Answer</th>
+        <th>Correct Answer</th>
+        <th style="width:2rem"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in questions %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ q.text }}</td>
+        <td class="{% if q.chosen == q.correct %}has-text-success{% else %}has-text-danger{% endif %}">
+          {% if q.chosen >= 0 %}{{ q.options[q.chosen] }}{% else %}—{% endif %}
+        </td>
+        <td class="has-text-success">{{ q.options[q.correct] }}</td>
+        <td class="has-text-centered">{% if q.chosen == q.correct %}✓{% else %}✗{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if return_url %}
+<a class="button is-light" href="{{ return_url }}">← Return to Platform</a>
+{% endif %}
+{% endblock %}

@@ -332,6 +332,117 @@ LTI 1.3 中，私钥永远不离开各自服务器。即使攻击者拿到公钥
 
 ---
 
+## LTI 作为认证桥梁：扩展用法
+
+LTI 的核心设计是"启动一个学习活动"，但它本质上解决的是**跨系统身份传递**问题。一旦理解这一点，就可以把它用在协议设计之外的场景。
+
+### 思路：用 Launch 做鉴权，不做内容入口
+
+标准 LTI Launch 的目的是"打开工具，开始做某件事"。但同样的流程可以用来回答一个更简单的问题：**"这个人是谁？他有权看这个页面吗？"**
+
+这相当于把 LTI 当作 SSO（单点登录）用——Platform 用私钥签名担保"这个用户是 sub=42"，Tool 验签后拿着这个担保做自己的权限判断，完全不需要独立的登录体系。
+
+### Custom Parameters：Platform 向 Tool 传递意图
+
+LTI 1.3 的 id_token 支持 `custom` claim，Platform 可以在发起 Launch 时附加任意键值：
+
+```json
+"https://purl.imsglobal.org/spec/lti/claim/custom": {
+  "view": "detail",
+  "attempt_id": "42"
+}
+```
+
+Tool 收到后，根据这些参数决定展示哪个页面、走哪条业务逻辑。**协议只负责把这些参数安全地传到 Tool，业务逻辑完全由 Tool 自己定义。**
+
+### 本项目的扩展实践：答题详情页
+
+具体场景：Platform 的成绩本里，老师想点开某条成绩查看该学生的逐题答题详情。详情数据在 exam-tool 里，不应该随意暴露。
+
+**解决方式**：
+
+1. Platform 成绩本每行加"Detail ↗"按钮，点击触发一次 LTI Launch
+2. 这次 Launch 的 id_token 与正常考试的区别：
+   - `sub` 是目标学生的 ID（不是当前登录用户）
+   - 包含 `custom.view = "detail"`
+   - **不包含 AGS endpoint claim**（没有成绩回传能力）
+3. exam-tool 收到 id_token，检测到 `custom.view = "detail"`，走详情分支：
+   - 用 `sub` + `resource_link_id` 查已有的答题记录
+   - 直接渲染详情页，**不创建任何新记录，不触发 AGS**
+4. 用户全程无感，就像点了一个普通链接
+
+**安全性来源**：详情页没有公开路由，唯一入口是通过 LTI Launch 验签的 id_token。攻击者无法伪造合法的 id_token（没有 Platform 私钥），也无法篡改 `sub`（修改 JWT 内容会导致签名验证失败）。
+
+### 控制 id_token 里放什么 = 控制 Tool 开放哪些能力
+
+这是 LTI 1.3 设计的精髓之一：**Platform 通过控制 id_token 的内容，来精细控制 Tool 的行为边界**。
+
+| id_token 包含 | Tool 能做什么 |
+|---|---|
+| AGS endpoint | 可以回传成绩 |
+| 不含 AGS endpoint | 只能展示内容，无法写成绩 |
+| `custom.view=detail` | 走详情分支，不创建新记录 |
+| `custom.role=readonly` | Tool 可据此屏蔽编辑功能 |
+| `custom.expires=<时间戳>` | Tool 可实现访问时间窗口限制 |
+
+
+e.g. 下面这个 id_token 代表一个"查看答题详情"的 Launch，Tool 根据它展示详情页，且不需要提供成绩回传功能：
+```json
+{
+  "iss": "http://127.0.0.1:8001",
+  "sub": "1",
+  "aud": "client_38e99d5bf4c4",
+  "iat": 1777382779,
+  "exp": 1777383079,
+  "nonce": "8493ef5645f2443cb28ba1c7058c0b6a",
+  "name": "liupeixin",
+  "given_name": "liupeixin",
+  "https://purl.imsglobal.org/spec/lti/claim/message_type": "LtiResourceLinkRequest",
+  "https://purl.imsglobal.org/spec/lti/claim/version": "1.3.0",
+  "https://purl.imsglobal.org/spec/lti/claim/deployment_id": "dep_128bd6284880",
+  "https://purl.imsglobal.org/spec/lti/claim/target_link_uri": "http://127.0.0.1:8002/exam",
+  "https://purl.imsglobal.org/spec/lti/claim/resource_link": {
+    "id": "rl_2a289e48f34e46bd809ca5059c7fbd92",
+    "title": "Exam"
+  },
+  "https://purl.imsglobal.org/spec/lti/claim/roles": [
+    "http://purl.imsglobal.org/vocab/lis/v2/membership#Learner"
+  ],
+  "https://purl.imsglobal.org/spec/lti/claim/context": {
+    "id": "1",
+    "type": [
+      "http://purl.imsglobal.org/vocab/lis/v2/course#CourseOffering"
+    ]
+  },
+  "https://purl.imsglobal.org/spec/lti/claim/launch_presentation": {
+    "return_url": "http://127.0.0.1:8001/courses/1"
+  },
+  "https://purl.imsglobal.org/spec/lti/claim/custom": {
+    "view": "detail"
+  }
+}
+```
+
+这些都不是 LTI 协议规定的行为，而是 Platform 和 Tool 之间自定义的**业务契约**。LTI 只是提供了安全传递这些参数的通道。
+
+### 可以进一步发挥的方向
+
+**角色驱动的页面权限**
+
+`roles` claim 里可以区分 `Learner`、`Instructor`、`Administrator`。Tool 可以根据角色展示不同界面，比如老师看到所有人的成绩，学生只看到自己的。这些判断完全在 Tool 端，Platform 只需要如实传入角色。
+
+**带有效期的临时访问**
+
+在 `custom` 里传入一个过期时间戳，Tool 拒绝展示已过期内容。类似于"限时查看"功能，不需要独立的权限系统。
+
+**多工具之间的身份传递**
+
+一次 Launch 只能打开一个 Tool，但 Tool A 可以在自己的页面里发起新的 LTI Launch 到 Tool B（需要 Platform 支持），用同一套身份体系串联多个工具。
+
+**本质上**，只要需要跨系统传递"这个人是谁、他被允许做什么"，LTI 的 OIDC + JWT 机制就可以复用，不局限于传统的"打开学习活动"场景。
+
+---
+
 ## 本项目实现了哪些，省略了哪些
 
 **实现了：**

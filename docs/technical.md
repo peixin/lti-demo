@@ -69,7 +69,7 @@ lti-demo/
     └── templates/
         ├── base.html
         ├── admin_login.html / admin.html
-        ├── exam.html / result.html
+        ├── exam.html / result.html / detail.html
         └── error.html
 ```
 
@@ -172,7 +172,8 @@ lti-demo/
 | POST | `/courses/add` | 创建课程 |
 | GET | `/courses/<id>` | 课程详情 + 成绩本 |
 | POST | `/courses/<id>/activities/add` | 添加活动 |
-| GET | `/lti/launch/<activity_id>` | LTI Step 1：重定向到工具 login URL |
+| GET | `/lti/launch/<activity_id>` | LTI Step 1：重定向到工具 login URL（正常考试） |
+| GET | `/lti/launch_detail/<activity_id>/<user_id>` | LTI Step 1：重定向到工具 login URL（查看答题详情） |
 | GET | `/lti/oidc/auth` | LTI Step 3：OIDC 授权端点，签发 id_token |
 | GET | `/lti/jwks` | 平台公钥 JWKS |
 | POST | `/lti/token` | OAuth2 Token 端点（JWT Bearer → access token）|
@@ -257,10 +258,11 @@ Cookie 名 `platform_session`，`session.permanent=True`，有效期 7 天。
 | GET/POST | `/admin` | Admin 面板：平台配置、答题记录、题目 |
 | GET | `/lti/jwks` | 工具公钥 JWKS |
 | GET/POST | `/lti/login` | LTI Step 2：生成 state/nonce，重定向到平台 OIDC 授权端点 |
-| POST | `/lti/launch` | LTI Step 4：验证 id_token，建立会话，跳转考试页 |
+| POST | `/lti/launch` | LTI Step 4：验证 id_token；若 `custom.view=detail` 则渲染答题详情，否则建立会话跳转考试页 |
 | GET | `/exam` | 考试页（需要有效 LTI 会话）|
 | POST | `/exam/submit` | 提交答案，计算分数，通过 AGS 回传成绩 |
 | GET | `/result` | 结果页，含"Return to Platform"按钮 |
+| GET | `/detail` | 答题详情页（由 `/lti/launch` 内部渲染，不直接访问）|
 
 ---
 
@@ -272,7 +274,7 @@ Cookie 名 `platform_session`，`session.permanent=True`，有效期 7 天。
 |---|---|
 | `generate_key_pair()` | 生成 RSA-2048 密钥对，返回 (private_pem, public_pem, kid) |
 | `public_key_to_jwk(public_pem, kid)` | 将 PEM 公钥转为 JWK dict，用于 `/lti/jwks` 响应 |
-| `make_id_token(...)` | 构建并用私钥 RS256 签名 LTI 1.3 id_token JWT |
+| `make_id_token(..., lineitem_url=None, return_url=None, custom_params=None)` | 构建并用私钥 RS256 签名 LTI 1.3 id_token JWT；`lineitem_url` 为 None 时不包含 AGS endpoint claim；`custom_params` 不为 None 时写入 `custom` claim |
 | `verify_tool_jwt(token, jwks_url, token_url)` | 在 Token 端点验证工具发来的 JWT Bearer 断言 |
 
 ### `exam-tool/lti.py`
@@ -338,6 +340,99 @@ Cookie 名 `platform_session`，`session.permanent=True`，有效期 7 天。
     │  渲染考试页面                                        │
     │<──────────────────────────────────────────────────│
 ```
+
+### Detail Launch 流程（查看答题详情）
+
+Platform Gradebook 里每条成绩记录有 `Detail ↗` 按钮，点击后走一次完整 LTI Launch，但 id_token 携带 `custom.view=detail`，exam-tool 收到后直接渲染已有的答题记录，**不创建新 session、不创建新 attempt、不触发 AGS 回传**。
+
+```
+用户浏览器              Platform (8001)            Exam Tool (8002)
+    │                       │                            │
+    │  GET /lti/launch_detail/<activity_id>/<user_id>    │
+    │──────────────────────>│                            │
+    │  302 → tool login URL  │  lti_message_hint =        │
+    │       (同正常 launch)   │  "detail:{act_id}:{uid}"   │
+    │<──────────────────────│                            │
+    │                        Step 1                       │
+    │  GET /lti/login        │                            │
+    │──────────────────────────────────────────────────>│
+    │  302 → platform OIDC auth (同正常流程)              │
+    │<──────────────────────────────────────────────────│
+    │                        Step 2                       │
+    │  GET /lti/oidc/auth    │                            │
+    │──────────────────────>│                            │
+    │                       │  解析 lti_message_hint      │
+    │                       │  sub = 目标学生 ID           │
+    │                       │  不创建 lineitem/grade 行   │
+    │                       │  id_token 不含 AGS claim    │
+    │                       │  id_token 含 custom.view=detail
+    │  渲染 oidc_response.html (自动 POST)                │
+    │<──────────────────────│                            │
+    │                        Step 3                       │
+    │  POST /lti/launch      │                            │
+    │──────────────────────────────────────────────────>│
+    │                       │           验证 id_token      │
+    │                       │           检测 custom.view=detail
+    │                       │           按 sub + resource_link_id
+    │                       │           查 lti_sessions → attempts
+    │  渲染 detail.html                                   │
+    │<──────────────────────────────────────────────────│
+    │                        Step 4（直接渲染，无跳转）    │
+```
+
+**与正常 Launch 的关键差异**
+
+| | 正常 Launch | Detail Launch |
+|---|---|---|
+| `lti_message_hint` 格式 | `{activity_id}` | `detail:{activity_id}:{user_id}` |
+| id_token `sub` | 当前登录用户 | 目标学生 ID |
+| id_token AGS endpoint | 有 | 无 |
+| id_token `custom` claim | 无 | `{"view": "detail"}` |
+| exam-tool 行为 | 创建 session + attempt | 查已有 attempt，直接渲染 |
+| 数据库写入 | lti_sessions + attempts | 无 |
+
+### 设计讨论：用 LTI 做认证桥梁的合理性
+
+#### 协议层面：合法但语义过载
+
+`custom` claim 是 LTI 1.3 spec 的官方可选字段，Platform 可以放任意键值，Tool 自由使用。从协议合规角度，这个做法没有问题。
+
+但 LTI 的 `message_type` 固定为 `LtiResourceLinkRequest`，语义是"启动这个资源链接"。用它来"查看一个详情页"，形式合法，但偏离了设计意图——LTI 假设每次 Launch 都对应一个学习资源被实际打开和使用。这是语义上的过载，不是协议的破坏。
+
+#### 与 SSO 的本质区别
+
+LTI 和 SSO 解决的是同一类问题（跨系统身份传递），但发起方向相反：
+
+```
+LTI：  Platform 主动打包上下文推给 Tool
+        "你去展示这个内容，这是用户信息和所有上下文"
+        适合：Platform 决定展示什么，Tool 是内容执行方
+
+SSO：  Tool 需要验证身份，向 Platform 发起请求
+        "请告诉我这个用户是谁，我来决定展示什么"
+        适合：Tool 有自己的导航和权限逻辑，只需要身份凭证
+```
+
+"点链接查看详情页"本质上属于后者——Tool 需要知道访问者是谁，然后自己决定展示什么内容。这是 SSO（标准 OIDC）的场景，不是 LTI 的场景。如果从零设计，Platform 作为 OIDC Provider、Tool 作为 Relying Party，是更干净的架构。
+
+#### 为什么这里仍然选择 LTI
+
+**信任基础设施已经建好**。Platform 和 Tool 已经互换了密钥、配好了 JWKS、建立了 `client_id` / `deployment_id` 的映射关系。这套信任链可以直接复用，不需要为"查看详情"单独搭一套 OIDC 注册流程。
+
+**成本不对等**。Detail 查看是附属功能，专门引入一套 SSO 基础设施（独立的 OIDC Provider 配置、token 端点、redirect 注册）的工程成本远超收益。
+
+**LTI 生态的惯用做法**。在真实的 LTI 产品中，复用 Launch 机制做"Instructor 视图"、"管理页面跳转"是常见模式，属于工程上的务实选择。
+
+#### 结论
+
+| 维度 | 评估 |
+|---|---|
+| 协议合规性 | ✓ custom claim 是官方支持的扩展点 |
+| 语义准确性 | △ message_type 语义被过载，偏离"启动学习资源"的本意 |
+| 架构合理性 | △ SSO（标准 OIDC）在概念上更匹配，但需要额外基础设施 |
+| 工程务实性 | ✓ 复用已有信任关系，避免重复建设 |
+
+**适用原则**：如果系统本身就是 LTI 生态的一部分，复用 Launch 做跨页面鉴权是合理的工程折衷。如果是通用 Web 系统，没有 LTI 的硬性约束，应优先用标准 OIDC SSO。
 
 ### AGS 成绩回传流程
 

@@ -78,6 +78,7 @@
             <th>Student</th>
             <th>Score</th>
             <th>Submitted</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -90,6 +91,12 @@
               </span>
             </td>
             <td>{{ gr.updated_at[:16] }}</td>
+            <td>
+              <a class="button is-small is-light"
+                 href="/lti/launch_detail/{{ gr.activity_id }}/{{ gr.user_id }}">
+                Detail ↗
+              </a>
+            </td>
           </tr>
           {% endfor %}
         </tbody>

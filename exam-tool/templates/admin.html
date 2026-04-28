@@ -1,5 +1,22 @@
 {% extends 'base.html' %}
 {% block content %}
+<style>
+.copy-btn {
+  border: 1px solid #dbdbdb; background: #f5f5f5; cursor: pointer;
+  color: #555; font-size: 1rem; padding: 2px 7px; border-radius: 4px;
+  vertical-align: middle; margin-left: 6px; line-height: 1.4;
+}
+.copy-btn:hover { background: #eee; color: #111; border-color: #bbb; }
+.copy-btn.copied { background: #effaf5; color: #257942; border-color: #48c774; }
+</style>
+<script>
+function copy(btn, text) {
+  navigator.clipboard.writeText(text);
+  btn.textContent = '✓';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = '⎘'; btn.classList.remove('copied'); }, 1500);
+}
+</script>
 <div class="level">
   <div class="level-left"><h1 class="title level-item">Exam Tool Admin</h1></div>
   <div class="level-right"><a class="button is-light is-small level-item" href="/admin/logout">Logout</a></div>
@@ -13,10 +30,10 @@
       <p class="help mb-3">Register these in the platform's "Add Tool" page.</p>
       <table class="table is-narrow is-size-7 is-fullwidth">
         <tbody>
-          <tr><th>Login URL</th><td><code>{{ tool_info.login_url }}</code></td></tr>
-          <tr><th>Redirect URI</th><td><code>{{ tool_info.redirect_uri }}</code></td></tr>
-          <tr><th>JWKS URL</th><td><code>{{ tool_info.jwks_url }}</code></td></tr>
-          <tr><th>Target Link URI</th><td><code>{{ tool_info.target_link_uri }}</code></td></tr>
+          <tr><th>Login URL</th><td><code>{{ tool_info.login_url }}</code><button class="copy-btn" onclick="copy(this,'{{ tool_info.login_url }}')">⎘</button></td></tr>
+          <tr><th>Redirect URI</th><td><code>{{ tool_info.redirect_uri }}</code><button class="copy-btn" onclick="copy(this,'{{ tool_info.redirect_uri }}')">⎘</button></td></tr>
+          <tr><th>JWKS URL</th><td><code>{{ tool_info.jwks_url }}</code><button class="copy-btn" onclick="copy(this,'{{ tool_info.jwks_url }}')">⎘</button></td></tr>
+          <tr><th>Target Link URI</th><td><code>{{ tool_info.target_link_uri }}</code><button class="copy-btn" onclick="copy(this,'{{ tool_info.target_link_uri }}')">⎘</button></td></tr>
         </tbody>
       </table>
     </div>

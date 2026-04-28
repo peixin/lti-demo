@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav class="breadcrumb mb-4">
+  <ul>
+    <li><a href="/">Dashboard</a></li>
+    <li class="is-active"><a>{{ course.name }}</a></li>
+  </ul>
+</nav>
+
+<h1 class="title">{{ course.name }}</h1>
+
+<div class="columns">
+  <!-- Activities column -->
+  <div class="column is-7">
+    <div class="box">
+      <h2 class="subtitle">Activities</h2>
+
+      {% if tools %}
+      <form method="post" action="/courses/{{ course.id }}/activities/add" class="mb-5">
+        <div class="field">
+          <label class="label">Activity name</label>
+          <div class="control">
+            <input class="input" type="text" name="name" placeholder="e.g. Chapter 1 Quiz" required>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Tool</label>
+          <div class="control">
+            <div class="select is-fullwidth">
+              <select name="tool_id" required>
+                {% for t in tools %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        <button class="button is-success">+ Add Activity</button>
+      </form>
+      {% else %}
+      <div class="notification is-warning is-light">
+        No tools registered yet. <a href="/tools/add">Register a tool</a> first.
+      </div>
+      {% endif %}
+
+      {% for act in activities %}
+      <div class="card mb-3">
+        <div class="card-content py-3">
+          <div class="level mb-0">
+            <div class="level-left">
+              <div>
+                <p class="has-text-weight-semibold">{{ act.name }}</p>
+                <p class="is-size-7 has-text-grey">{{ act.tool_name }}</p>
+              </div>
+            </div>
+            <div class="level-right">
+              <a href="/lti/launch/{{ act.id }}" class="button is-primary is-small">
+                Launch ↗
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <p class="has-text-grey">No activities yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Gradebook column -->
+  <div class="column is-5">
+    <div class="box">
+      <h2 class="subtitle">Gradebook</h2>
+      {% if grades %}
+      <table class="table is-fullwidth is-striped is-hoverable is-size-7">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Score</th>
+            <th>Submitted</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for gr in grades %}
+          <tr>
+            <td>{{ gr.username }}</td>
+            <td>
+              <span class="tag {% if gr.score >= 0.6 %}is-success{% else %}is-danger{% endif %}">
+                {{ "%.0f"|format(gr.score * 100) }}%
+              </span>
+            </td>
+            <td>{{ gr.updated_at[:16] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="has-text-grey">No grades yet. Grades appear here after students complete the exam.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

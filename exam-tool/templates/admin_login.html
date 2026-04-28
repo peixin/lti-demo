@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="columns is-centered">
+  <div class="column is-4">
+    <h1 class="title has-text-centered">Admin Login</h1>
+    <div class="box">
+      <form method="post">
+        <div class="field">
+          <label class="label">Password</label>
+          <div class="control">
+            <input class="input" type="password" name="password" required autofocus>
+          </div>
+          <p class="help">Default: <code>admin</code>. Set env var <code>ADMIN_PASSWORD</code> to change.</p>
+        </div>
+        <button class="button is-primary is-fullwidth mt-3">Login</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

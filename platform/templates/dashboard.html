@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="level">
+  <div class="level-left">
+    <h1 class="title level-item">My Courses</h1>
+  </div>
+  <div class="level-right">
+    <a class="button is-link level-item" href="/tools">Manage Tools</a>
+  </div>
+</div>
+
+<div class="box mb-5">
+  <form method="post" action="/courses/add" class="field has-addons">
+    <div class="control is-expanded">
+      <input class="input" type="text" name="name" placeholder="New course name…" required>
+    </div>
+    <div class="control">
+      <button class="button is-success">+ Add Course</button>
+    </div>
+  </form>
+</div>
+
+{% if courses %}
+<div class="columns is-multiline">
+  {% for c in courses %}
+  <div class="column is-4">
+    <div class="card">
+      <div class="card-content">
+        <p class="title is-5">{{ c.name }}</p>
+      </div>
+      <footer class="card-footer">
+        <a class="card-footer-item" href="/courses/{{ c.id }}">Open →</a>
+      </footer>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="has-text-grey">No courses yet. Create one above.</p>
+{% endif %}
+{% endblock %}

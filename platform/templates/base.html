@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LTI Platform</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+</head>
+<body>
+<nav class="navbar is-primary" role="navigation">
+  <div class="navbar-brand">
+    <span class="navbar-item has-text-weight-bold is-size-5">🎓 LTI Platform</span>
+  </div>
+  <div class="navbar-menu">
+    <div class="navbar-end">
+      {% if session.user_id %}
+      <a class="navbar-item" href="/">Dashboard</a>
+      <a class="navbar-item" href="/tools">Tools</a>
+      <span class="navbar-item has-text-weight-semibold">{{ session.username }}</span>
+      <a class="navbar-item" href="/logout">Logout</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<section class="section">
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="notification is-{{ cat }} is-light mb-4">{{ msg }}</div>
+    {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+</section>
+</body>
+</html>

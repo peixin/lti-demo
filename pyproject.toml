@@ -1,0 +1,23 @@
+[project]
+name = "lti-demo"
+version = "0.0.1"
+description = "A minimal end-to-end demo of LTI 1.3 (Learning Tools Interoperability) with OIDC launch flow and AGS grade passback, built with Flask and SQLite."
+authors = [
+    {name = "liupeixin",email = "fengyi.mail@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.12"
+flask = ">=3.0"
+requests = ">=2.31"
+pyjwt = {version = ">=2.8", extras = ["crypto"]}

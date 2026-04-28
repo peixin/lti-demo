@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="title">Exam</h1>
+<p class="subtitle">Welcome, <strong>{{ user_name }}</strong>. Please answer all questions.</p>
+
+<form method="post" action="/exam/submit" id="exam-form">
+  {% for q in questions %}
+  <div class="box mb-4">
+    <p class="has-text-weight-bold mb-3">{{ loop.index }}. {{ q.text }}</p>
+    {% for opt in q.options %}
+    <label class="radio" style="display:block; margin-bottom:0.5rem">
+      <input type="radio" name="q_{{ q.id }}" value="{{ loop.index0 }}" required>
+      &nbsp;{{ opt }}
+    </label>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <div class="field">
+    <button type="button" class="button is-primary is-medium" onclick="confirmSubmit()">
+      Submit Exam
+    </button>
+  </div>
+</form>
+
+<script>
+function confirmSubmit() {
+  var form = document.getElementById('exam-form');
+  var radios = form.querySelectorAll('input[type=radio]');
+  var names = new Set();
+  var checked = new Set();
+  radios.forEach(function(r) {
+    names.add(r.name);
+    if (r.checked) checked.add(r.name);
+  });
+  if (checked.size < names.size) {
+    alert('Please answer all questions before submitting.');
+    return;
+  }
+  if (confirm('Submit the exam now?')) {
+    form.submit();
+  }
+}
+</script>
+{% endblock %}

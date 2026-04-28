@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="level">
+  <div class="level-left"><h1 class="title level-item">Exam Tool Admin</h1></div>
+  <div class="level-right"><a class="button is-light is-small level-item" href="/admin/logout">Logout</a></div>
+</div>
+
+<div class="columns">
+  <!-- Tool info (for platform registration) -->
+  <div class="column is-5">
+    <div class="box">
+      <p class="subtitle">Tool Endpoints</p>
+      <p class="help mb-3">Register these in the platform's "Add Tool" page.</p>
+      <table class="table is-narrow is-size-7 is-fullwidth">
+        <tbody>
+          <tr><th>Login URL</th><td><code>{{ tool_info.login_url }}</code></td></tr>
+          <tr><th>Redirect URI</th><td><code>{{ tool_info.redirect_uri }}</code></td></tr>
+          <tr><th>JWKS URL</th><td><code>{{ tool_info.jwks_url }}</code></td></tr>
+          <tr><th>Target Link URI</th><td><code>{{ tool_info.target_link_uri }}</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Platform OIDC config -->
+  <div class="column is-7">
+    <div class="box">
+      <p class="subtitle">Platform OIDC Config</p>
+      <p class="help mb-3">Copy from platform's Tools page after registering.</p>
+      <form method="post">
+        {% for field, label, placeholder in [
+          ('platform_iss',          'Issuer (ISS)',    'http://localhost:8001'),
+          ('client_id',             'Client ID',       'client_xxxx'),
+          ('deployment_id',         'Deployment ID',   'dep_xxxx'),
+          ('platform_oidc_auth_url','OIDC Auth URL',   'http://localhost:8001/lti/oidc/auth'),
+          ('platform_jwks_url',     'JWKS URL',        'http://localhost:8001/lti/jwks'),
+          ('platform_token_url',    'Token URL',       'http://localhost:8001/lti/token'),
+        ] %}
+        <div class="field">
+          <label class="label is-small">{{ label }}</label>
+          <div class="control">
+            <input class="input is-small" type="text" name="{{ field }}"
+                   value="{{ config[field] or '' }}" placeholder="{{ placeholder }}">
+          </div>
+        </div>
+        {% endfor %}
+        <button class="button is-primary is-small mt-2">Save</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Attempts -->
+<div class="box mt-4">
+  <h2 class="subtitle">Exam Attempts</h2>
+  {% if attempts %}
+  {% for a in attempts %}
+  <div class="card mb-3">
+    <div class="card-header" style="cursor:pointer" onclick="toggle('d{{ loop.index }}')">
+      <div class="card-header-title" style="justify-content:space-between">
+        <span>
+          <strong>{{ a.user_name }}</strong>
+          <span class="tag ml-2 {% if a.score >= 0.6 %}is-success{% else %}is-danger{% endif %}">
+            {{ "%.0f"|format(a.score * 100) }}%
+          </span>
+        </span>
+        <span class="is-size-7 has-text-grey has-text-weight-normal">
+          {{ a.submitted_at[:16] }}
+        </span>
+      </div>
+    </div>
+    <div id="d{{ loop.index }}" class="card-content is-hidden">
+      <table class="table is-fullwidth is-size-7">
+        <thead><tr><th>#</th><th>Question</th><th>Chosen</th><th>Correct</th><th></th></tr></thead>
+        <tbody>
+          {% for d in a.detail %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ d.text }}</td>
+            <td {% if d.chosen == d.correct %}class="has-text-success"{% else %}class="has-text-danger"{% endif %}>
+              {% if d.chosen >= 0 %}{{ d.options[d.chosen] }}{% else %}—{% endif %}
+            </td>
+            <td class="has-text-success">{{ d.options[d.correct] }}</td>
+            <td>{% if d.chosen == d.correct %}✓{% else %}✗{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="has-text-grey">No attempts yet.</p>
+  {% endif %}
+</div>
+
+<!-- Questions -->
+<div class="box mt-4">
+  <h2 class="subtitle">Questions</h2>
+  {% for q in questions %}
+  <div class="mb-3">
+    <p class="has-text-weight-semibold">{{ loop.index }}. {{ q.text }}</p>
+    {% for opt in q.options %}
+    <p class="is-size-7 ml-4
+       {% if loop.index0 == q.answer %}has-text-success has-text-weight-bold{% else %}has-text-grey{% endif %}">
+      {{ '✓' if loop.index0 == q.answer else '○' }} {{ opt }}
+    </p>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+function toggle(id){ document.getElementById(id).classList.toggle('is-hidden'); }
+</script>
+{% endblock %}

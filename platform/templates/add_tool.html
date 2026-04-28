@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="columns is-centered">
+  <div class="column is-7">
+    <h1 class="title">Register LTI 1.3 Tool</h1>
+    <div class="box">
+      <form method="post">
+        <div class="field">
+          <label class="label">Tool Name</label>
+          <div class="control">
+            <input class="input" type="text" name="name" placeholder="e.g. Exam Tool" required autofocus>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Login Initiation URL</label>
+          <div class="control">
+            <input class="input" type="text" name="login_url"
+                   placeholder="http://localhost:8002/lti/login" required>
+          </div>
+          <p class="help">Tool's OIDC login initiation endpoint</p>
+        </div>
+        <div class="field">
+          <label class="label">Redirect URI (Launch URL)</label>
+          <div class="control">
+            <input class="input" type="text" name="redirect_uri"
+                   placeholder="http://localhost:8002/lti/launch" required>
+          </div>
+          <p class="help">Tool's OIDC callback endpoint</p>
+        </div>
+        <div class="field">
+          <label class="label">JWKS URL</label>
+          <div class="control">
+            <input class="input" type="text" name="jwks_url"
+                   placeholder="http://localhost:8002/lti/jwks" required>
+          </div>
+          <p class="help">Tool's public key endpoint (used to verify token requests)</p>
+        </div>
+        <div class="field">
+          <label class="label">Target Link URI</label>
+          <div class="control">
+            <input class="input" type="text" name="target_link_uri"
+                   placeholder="http://localhost:8002/exam" required>
+          </div>
+          <p class="help">Default launch destination on the tool</p>
+        </div>
+        <p class="help mb-4">
+          <strong>client_id</strong> and <strong>deployment_id</strong> will be auto-generated.
+        </p>
+        <div class="field is-grouped">
+          <div class="control"><button class="button is-primary">Register</button></div>
+          <div class="control"><a class="button is-light" href="/tools">Cancel</a></div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

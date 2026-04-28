@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="columns is-centered">
+  <div class="column is-5">
+    <div class="box has-text-centered">
+      <h1 class="title">Exam Result</h1>
+      <p class="subtitle">{{ user_name }}</p>
+
+      {% set pct = (score * 100) | int %}
+      <p class="is-size-1 has-text-weight-bold
+                 {% if score >= 0.6 %}has-text-success{% else %}has-text-danger{% endif %}">
+        {{ pct }}%
+      </p>
+
+      <p class="is-size-5 mt-2">
+        {% if score >= 0.6 %}
+        <span class="tag is-success is-large">Passed ✓</span>
+        {% else %}
+        <span class="tag is-danger is-large">Failed ✗</span>
+        {% endif %}
+      </p>
+
+      <p class="mt-5 is-size-7 has-text-grey">
+        Score has been reported back to the platform via LTI Basic Outcomes.
+      </p>
+
+      {% if return_url %}
+      <a class="button is-link mt-4" href="{{ return_url }}">← Return to Platform</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

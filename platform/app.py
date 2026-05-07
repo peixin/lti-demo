@@ -475,4 +475,4 @@ import jwt  # noqa – needed for unverified decode in token endpoint
 
 if __name__ == '__main__':
     init_db()
-    app.run(port=8001, debug=True)
+    app.run(host='0.0.0.0', port=8001, debug=True)

@@ -1,14 +1,175 @@
 {% extends 'base.html' %}
 {% block content %}
+
 <style>
-.copy-btn {
-  border: 1px solid #dbdbdb; background: #f5f5f5; cursor: pointer;
-  color: #555; font-size: 1rem; padding: 2px 7px; border-radius: 4px;
-  vertical-align: middle; margin-left: 6px; line-height: 1.4;
-}
-.copy-btn:hover { background: #eee; color: #111; border-color: #bbb; }
-.copy-btn.copied { background: #effaf5; color: #257942; border-color: #48c774; }
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .copy-btn {
+    border: 1px solid var(--border);
+    background: #f8fafc;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s ease;
+    margin-left: 0.5rem;
+  }
+
+  .copy-btn:hover {
+    background: #f1f5f9;
+    color: var(--text-main);
+    border-color: var(--text-muted);
+  }
+
+  .copy-btn.copied {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #34d399;
+  }
+
+  .input-custom {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 0.45rem 0.75rem;
+    font-size: 0.85rem;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-custom:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+  }
+
+  .field-horizontal {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .field-horizontal .label {
+    width: 160px;
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0 !important;
+    margin-right: 1.25rem;
+    text-align: left;
+  }
+
+  .field-horizontal .control {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+  }
+
+  @media (max-width: 1023px) {
+    .field-horizontal {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
+    }
+    .field-horizontal .label {
+      width: 100%;
+      text-align: left;
+      margin-right: 0;
+      margin-bottom: 0.25rem !important;
+    }
+    .field-horizontal .control {
+      width: 100%;
+    }
+  }
+
+  .admin-section-box {
+    background-color: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+  }
+
+  .admin-section-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Table styles */
+  .table-custom {
+    width: 100%;
+    font-size: 0.82rem;
+  }
+
+  .table-custom th {
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 0.6rem 0.85rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table-custom td {
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+    word-break: break-all;
+  }
+
+  .table-custom tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* Accordion styles */
+  .attempt-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 0.85rem;
+    background-color: #ffffff;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .attempt-header {
+    background-color: #ffffff;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .attempt-header:hover {
+    background-color: #f8fafc;
+  }
+
+  .attempt-content {
+    background-color: #fcfdfe;
+    border-top: 1px solid var(--border);
+    padding: 1.25rem;
+    display: none;
+  }
+
+  .attempt-content.is-active {
+    display: block;
+  }
 </style>
+
 <script>
 function copy(btn, text) {
   navigator.clipboard.writeText(text);
@@ -16,118 +177,171 @@ function copy(btn, text) {
   btn.classList.add('copied');
   setTimeout(() => { btn.textContent = '⎘'; btn.classList.remove('copied'); }, 1500);
 }
+
+function toggleAccordion(id) {
+  var content = document.getElementById(id);
+  content.classList.toggle('is-active');
+}
 </script>
-<div class="level">
-  <div class="level-left"><h1 class="title level-item">Exam Tool Admin</h1></div>
-  <div class="level-right"><a class="button is-light is-small level-item" href="/admin/logout">Logout</a></div>
+
+<div class="admin-header">
+  <div>
+    <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.25rem;">
+      ⚙️ {{ t('admin_title') }}
+    </h1>
+    <span class="badge-info">{{ t('tool_capability') }}</span>
+  </div>
+  <div>
+    <a class="button is-light is-small" style="font-weight:600; border-radius:var(--radius-sm)" href="/admin/logout">
+      🚪 {{ t('logout') }}
+    </a>
+  </div>
 </div>
 
-<div class="columns">
+<div class="notification-custom is-success mb-5" style="border-radius:var(--radius-md); font-size:0.82rem; line-height:1.6;">
+  <strong>💡 {{ t('platform_config_tip_title') }}</strong>
+  {{ t('platform_config_tip_msg') }}
+</div>
+
+<div class="columns is-multiline">
   <!-- Tool info (for platform registration) -->
-  <div class="column is-5">
-    <div class="box">
-      <p class="subtitle">Tool Endpoints</p>
-      <p class="help mb-3">Register these in the platform's "Add Tool" page.</p>
-      <table class="table is-narrow is-size-7 is-fullwidth">
-        <tbody>
-          <tr><th>Login URL</th><td><code>{{ tool_info.login_url }}</code><button class="copy-btn" onclick="copy(this,'{{ tool_info.login_url }}')">⎘</button></td></tr>
-          <tr><th>Redirect URI</th><td><code>{{ tool_info.redirect_uri }}</code><button class="copy-btn" onclick="copy(this,'{{ tool_info.redirect_uri }}')">⎘</button></td></tr>
-          <tr><th>JWKS URL</th><td><code>{{ tool_info.jwks_url }}</code><button class="copy-btn" onclick="copy(this,'{{ tool_info.jwks_url }}')">⎘</button></td></tr>
-          <tr><th>Target Link URI</th><td><code>{{ tool_info.target_link_uri }}</code><button class="copy-btn" onclick="copy(this,'{{ tool_info.target_link_uri }}')">⎘</button></td></tr>
-        </tbody>
-      </table>
+  <div class="column is-12">
+    <div class="admin-section-box">
+      <h2 class="admin-section-title">📂 {{ t('tool_endpoints') }}</h2>
+      <p class="help mb-4" style="color:var(--text-muted);">{{ t('copy_help') }}</p>
+      
+      {% for key, val in [
+        ('login_url',        tool_info.login_url),
+        ('redirect_uri',     tool_info.redirect_uri),
+        ('jwks_url',         tool_info.jwks_url),
+        ('target_link_uri',  tool_info.target_link_uri)
+      ] %}
+      <div class="field-horizontal">
+        <label class="label">{{ t(key) }}</label>
+        <div class="control">
+          <input class="input-custom" type="text" value="{{ val }}" readonly style="background-color:#f8fafc; font-family:monospace; font-size:0.78rem; border-top-right-radius:0; border-bottom-right-radius:0; height:34px; line-height:34px; padding:0 0.75rem; border-right:none; flex-grow:1;">
+          <button class="copy-btn" onclick="copy(this,'{{ val }}')" style="margin-left:0; border-top-left-radius:0; border-bottom-left-radius:0; height:34px; width:36px; padding:0; display:flex; align-items:center; justify-content:center; flex-shrink:0;">⎘</button>
+        </div>
+      </div>
+      {% endfor %}
     </div>
   </div>
 
   <!-- Platform OIDC config -->
-  <div class="column is-7">
-    <div class="box">
-      <p class="subtitle">Platform OIDC Config</p>
-      <p class="help mb-3">Copy from platform's Tools page after registering.</p>
+  <div class="column is-12">
+    <div class="admin-section-box">
+      <h2 class="admin-section-title">🛡️ {{ t('platform_oidc_settings') }}</h2>
+      <p class="help mb-4" style="color:var(--text-muted);">{{ t('oidc_help') }}</p>
+      
       <form method="post">
-        {% for field, label, placeholder in [
-          ('platform_iss',          'Issuer (ISS)',    'http://localhost:8001'),
-          ('client_id',             'Client ID',       'client_xxxx'),
-          ('deployment_id',         'Deployment ID',   'dep_xxxx'),
-          ('platform_oidc_auth_url','OIDC Auth URL',   'http://localhost:8001/lti/oidc/auth'),
-          ('platform_jwks_url',     'JWKS URL',        'http://localhost:8001/lti/jwks'),
-          ('platform_token_url',    'Token URL',       'http://localhost:8001/lti/token'),
+        {% for field, key, placeholder in [
+          ('platform_iss',          'issuer',          'http://localhost:8001'),
+          ('client_id',             'client_id',       'client_xxxx'),
+          ('deployment_id',         'deployment_id',   'dep_xxxx'),
+          ('platform_oidc_auth_url','oidc_auth_url',   'http://localhost:8001/lti/oidc/auth'),
+          ('platform_jwks_url',     'jwks_url',        'http://localhost:8001/lti/jwks'),
+          ('platform_token_url',    'token_url',       'http://localhost:8001/lti/token'),
         ] %}
-        <div class="field">
-          <label class="label is-small">{{ label }}</label>
+        <div class="field-horizontal">
+          <label class="label">{{ t(key) }}</label>
           <div class="control">
-            <input class="input is-small" type="text" name="{{ field }}"
+            <input class="input-custom" type="text" name="{{ field }}"
                    value="{{ config[field] or '' }}" placeholder="{{ placeholder }}">
           </div>
         </div>
         {% endfor %}
-        <button class="button is-primary is-small mt-2">Save</button>
+        
+        <div class="field-horizontal">
+          <div style="width: 160px; flex-shrink: 0; margin-right: 1.25rem;"></div>
+          <div class="control">
+            <button class="btn-primary-gradient mt-3" style="border-radius:var(--radius-sm) !important; padding:0.45rem 1.5rem !important; font-size:0.85rem !important;">
+              💾 {{ t('save_settings') }}
+            </button>
+          </div>
+        </div>
       </form>
     </div>
   </div>
 </div>
 
 <!-- Attempts -->
-<div class="box mt-4">
-  <h2 class="subtitle">Exam Attempts</h2>
+<div class="admin-section-box mt-4">
+  <h2 class="admin-section-title">📝 {{ t('exam_attempts_logs') }}</h2>
+  
   {% if attempts %}
-  {% for a in attempts %}
-  <div class="card mb-3">
-    <div class="card-header" style="cursor:pointer" onclick="toggle('d{{ loop.index }}')">
-      <div class="card-header-title" style="justify-content:space-between">
-        <span>
-          <strong>{{ a.user_name }}</strong>
-          <span class="tag ml-2 {% if a.score >= 0.6 %}is-success{% else %}is-danger{% endif %}">
-            {{ "%.0f"|format(a.score * 100) }}%
+    {% for a in attempts %}
+    <div class="attempt-card">
+      <div class="attempt-header" onclick="toggleAccordion('d{{ loop.index }}')">
+        <div>
+          <span style="font-weight:700; font-size:0.92rem; color:var(--text-main);">{{ a.user_name }}</span>
+          <span class="tag ml-2 is-light" style="font-weight:600; font-size:0.75rem;">{{ categories[a.category].emoji }} {{ t('cat_' + a.category) }}</span>
+          <span class="tag ml-2 {% if a.pct >= 0.6 %}is-success{% else %}is-danger{% endif %} is-light" style="font-weight:700; font-size:0.75rem;">
+            {{ "%g"|format(a.score_given) }} / {{ "%g"|format(a.score_maximum) }}
+            ({{ "%.0f"|format(a.pct * 100) }}%)
           </span>
-        </span>
-        <span class="is-size-7 has-text-grey has-text-weight-normal">
-          {{ a.submitted_at[:16] }}
-        </span>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.50rem;">
+          <span class="local-time" data-utc="{{ a.submitted_at }}" style="font-size:0.75rem; color:var(--text-muted); font-weight:550;">{{ a.submitted_at[:16] }}</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">▾</span>
+        </div>
+      </div>
+      
+      <div id="d{{ loop.index }}" class="attempt-content">
+        <table class="table-custom">
+          <thead>
+            <tr>
+              <th style="width:5%;">#</th>
+              <th style="width:55%;">{{ t('table_q') }}</th>
+              <th style="width:20%;">{{ t('table_user_ans') }}</th>
+              <th style="width:20%;">{{ t('table_correct_ans') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in a.detail %}
+            <tr>
+              <td style="font-weight:bold; color:var(--text-muted);">{{ loop.index }}</td>
+              <td>{{ t(d.text) }}</td>
+              <td class="{% if d.chosen == d.correct %}has-text-success{% else %}has-text-danger{% endif %}" style="font-weight:600;">
+                {% if d.chosen >= 0 %}{{ t(d.options[d.chosen]) }}{% else %}—{% endif %}
+              </td>
+              <td class="has-text-success" style="font-weight:600;">{{ t(d.options[d.correct]) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
-    <div id="d{{ loop.index }}" class="card-content is-hidden">
-      <table class="table is-fullwidth is-size-7">
-        <thead><tr><th>#</th><th>Question</th><th>Chosen</th><th>Correct</th><th></th></tr></thead>
-        <tbody>
-          {% for d in a.detail %}
-          <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ d.text }}</td>
-            <td {% if d.chosen == d.correct %}class="has-text-success"{% else %}class="has-text-danger"{% endif %}>
-              {% if d.chosen >= 0 %}{{ d.options[d.chosen] }}{% else %}—{% endif %}
-            </td>
-            <td class="has-text-success">{{ d.options[d.correct] }}</td>
-            <td>{% if d.chosen == d.correct %}✓{% else %}✗{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endfor %}
+    {% endfor %}
   {% else %}
-  <p class="has-text-grey">No attempts yet.</p>
+    <p style="font-size:0.85rem; color:var(--text-muted); font-weight:550; text-align:center; padding:1rem 0;">{{ t('no_attempts') }}</p>
   {% endif %}
 </div>
 
-<!-- Questions -->
-<div class="box mt-4">
-  <h2 class="subtitle">Questions</h2>
-  {% for q in questions %}
-  <div class="mb-3">
-    <p class="has-text-weight-semibold">{{ loop.index }}. {{ q.text }}</p>
-    {% for opt in q.options %}
-    <p class="is-size-7 ml-4
-       {% if loop.index0 == q.answer %}has-text-success has-text-weight-bold{% else %}has-text-grey{% endif %}">
-      {{ '✓' if loop.index0 == q.answer else '○' }} {{ opt }}
-    </p>
+<!-- Questions by category -->
+<div class="admin-section-box mt-4">
+  <h2 class="admin-section-title">📚 {{ t('question_pool_index') }}</h2>
+  
+  <div class="columns">
+    {% for key, info in categories.items() %}
+    <div class="column is-4">
+      <p style="font-weight:800; font-size:1rem; color:var(--text-main); margin-bottom:1rem; padding-bottom:0.4rem; border-bottom:2px solid var(--border);">
+        {{ info.emoji }} {{ t('cat_' + key) }}
+      </p>
+      
+      {% for q in qs_by_category.get(key, []) %}
+      <div class="mb-4" style="background-color:#f8fafc; border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem;">
+        <p style="font-size:0.82rem; font-weight:700; color:var(--text-main); line-height:1.4; margin-bottom:0.6rem;">{{ loop.index }}. {{ t(q.text) }}</p>
+        {% for opt in q.options %}
+        <p style="font-size:0.78rem; line-height:1.4; margin-left:0.5rem; margin-bottom:0.25rem; font-weight:550;" 
+           class="{% if loop.index0 == q.answer %}has-text-success{% else %}has-text-grey{% endif %}">
+          {{ '✓' if loop.index0 == q.answer else '○' }} {{ t(opt) }}
+        </p>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
     {% endfor %}
   </div>
-  {% endfor %}
 </div>
 
-<script>
-function toggle(id){ document.getElementById(id).classList.toggle('is-hidden'); }
-</script>
 {% endblock %}

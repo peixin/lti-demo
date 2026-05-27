@@ -1,21 +1,99 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="level">
-  <div class="level-left">
-    <h1 class="title level-item">My Courses</h1>
+
+<style>
+  .dash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .course-card {
+    background-color: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .course-card:hover {
+    transform: translateY(-4px);
+    border-color: #a5b4fc;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .course-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-main);
+    padding: 1.5rem;
+    flex-grow: 1;
+  }
+
+  .course-footer {
+    border-top: 1px solid var(--border);
+    padding: 0.85rem 1.5rem;
+    background-color: #fafbfc;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .input-custom {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 0.6rem 0.85rem;
+    font-size: 0.92rem;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-custom:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+  }
+
+  .add-course-box {
+    background-color: #f8fafc;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+</style>
+
+<div class="dash-header">
+  <div>
+    <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.25rem;">
+      📚 {{ t('dashboard') }}
+    </h1>
+    <span class="tag is-info is-light" style="font-weight:600; font-size:0.75rem;">{{ t('teacher_console') }}</span>
   </div>
-  <div class="level-right">
-    <a class="button is-link level-item" href="/tools">Manage Tools</a>
+  <div>
+    <a class="button is-light is-small" style="font-weight:600; border-radius:var(--radius-sm)" href="/tools">
+      ⚙️ {{ t('manage_tools') }}
+    </a>
   </div>
 </div>
 
-<div class="box mb-5">
-  <form method="post" action="/courses/add" class="field has-addons">
-    <div class="control is-expanded">
-      <input class="input" type="text" name="name" placeholder="New course name…" required>
-    </div>
-    <div class="control">
-      <button class="button is-success">+ Add Course</button>
+<div class="add-course-box">
+  <form method="post" action="/courses/add">
+    <div class="field has-addons" style="margin-bottom:0;">
+      <div class="control is-expanded">
+        <input class="input-custom" type="text" name="name" placeholder="{{ t('course_name_placeholder') }}" required style="border-top-right-radius:0; border-bottom-right-radius:0;">
+      </div>
+      <div class="control">
+        <button class="btn-primary-gradient" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; font-size:0.88rem !important; padding: 0.6rem 1.5rem !important;">
+          ➕ {{ t('add_course') }}
+        </button>
+      </div>
     </div>
   </form>
 </div>
@@ -24,18 +102,23 @@
 <div class="columns is-multiline">
   {% for c in courses %}
   <div class="column is-4">
-    <div class="card">
-      <div class="card-content">
-        <p class="title is-5">{{ c.name }}</p>
+    <div class="course-card">
+      <div class="course-title">
+        📖 {{ c.name }}
       </div>
-      <footer class="card-footer">
-        <a class="card-footer-item" href="/courses/{{ c.id }}">Open →</a>
-      </footer>
+      <div class="course-footer">
+        <a href="/courses/{{ c.id }}" style="color:var(--primary); font-weight:700; font-size:0.85rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem; transition:transform 0.15s;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
+          {{ t('open_course') }}
+        </a>
+      </div>
     </div>
   </div>
   {% endfor %}
 </div>
 {% else %}
-<p class="has-text-grey">No courses yet. Create one above.</p>
+<p style="font-size:0.9rem; color:var(--text-muted); font-weight:550; text-align:center; padding:2rem 0;">
+  🏖️ {{ t('no_courses') }}
+</p>
 {% endif %}
+
 {% endblock %}

@@ -1,7 +1,50 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="notification is-danger">
-  <p class="has-text-weight-bold">Error</p>
-  <p>{{ message }}</p>
+
+<style>
+  .error-container {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    max-width: 550px;
+    margin: 0 auto;
+  }
+
+  .error-icon {
+    font-size: 3.5rem;
+    color: #ef4444;
+    margin-bottom: 1.25rem;
+    display: inline-block;
+  }
+
+  .error-box {
+    background-color: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    color: #b91c1c;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+    text-align: left;
+    box-shadow: var(--shadow-sm);
+  }
+</style>
+
+<div class="error-container">
+  <span class="error-icon">⚠️</span>
+  
+  <h1 class="title is-3" style="font-weight:800; color:#b91c1c; margin-bottom:1.5rem;">
+    {{ t('error_title') }}
+  </h1>
+  
+  <div class="error-box">
+    {{ message }}
+  </div>
+
+  <a class="btn-primary-gradient" href="javascript:history.back()">
+    ⬅️ {{ t('cancel') }}
+  </a>
 </div>
+
 {% endblock %}

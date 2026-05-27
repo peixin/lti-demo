@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+  .cat-card {
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: #ffffff;
+    padding: 2.25rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .cat-card:hover {
+    transform: translateY(-6px);
+    border-color: #a5b4fc;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .cat-card.is-selected {
+    border-color: var(--primary);
+    background-color: #f5f3ff;
+    box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.15), 0 0 0 3px rgba(79, 70, 229, 0.12);
+  }
+
+  .cat-emoji {
+    font-size: 3.25rem;
+    margin-bottom: 1.25rem;
+    transition: transform 0.25s ease;
+  }
+
+  .cat-card:hover .cat-emoji {
+    transform: scale(1.15) rotate(4deg);
+  }
+
+  .cat-name {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+  }
+
+  .cat-count {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background-color: #f1f5f9;
+    padding: 0.2rem 0.75rem;
+    border-radius: 9999px;
+  }
+
+  .cat-card.is-selected .cat-count {
+    background-color: #e0e7ff;
+    color: var(--primary);
+  }
+
+  .cat-radio {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pick-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+</style>
+
+<div class="pick-header">
+  <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.5rem;">
+    🛡️ {{ t('dl_title') }}
+  </h1>
+  <p class="subtitle is-6" style="color:var(--text-muted); line-height:1.5;">
+    {{ t('dl_subtitle', name=user_name) | safe }}
+  </p>
+</div>
+
+<form method="post" action="{{ url_for('deeplink_submit') }}" id="dl-form">
+  <input type="hidden" name="deep_link_return_url" value="{{ deep_link_return_url }}">
+  <input type="hidden" name="data" value="{{ data }}">
+
+  <div class="columns is-multiline">
+    {% for key, info in categories.items() %}
+    <div class="column is-4">
+      <label class="cat-card" id="card-{{ key }}">
+        <div class="cat-emoji">{{ info.emoji }}</div>
+        <div class="cat-name">{{ t('cat_' + key) }}</div>
+        <div class="cat-count">{{ t('dl_count', count=info.count) }}</div>
+        <input type="radio" class="cat-radio" name="category" value="{{ key }}" required>
+      </label>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="has-text-centered mt-6">
+    <button class="btn-primary-gradient" type="submit">
+      💾 {{ t('dl_submit') }}
+    </button>
+  </div>
+</form>
+
+<script>
+document.querySelectorAll('.cat-card').forEach(function(card) {
+  var radio = card.querySelector('input[type=radio]');
+  
+  if (radio.checked) {
+    card.classList.add('is-selected');
+  }
+
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('.cat-card').forEach(function(c) {
+      c.classList.remove('is-selected');
+    });
+    if (this.checked) {
+      card.classList.add('is-selected');
+    }
+  });
+});
+</script>
+{% endblock %}

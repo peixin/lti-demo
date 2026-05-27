@@ -1,44 +1,153 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1 class="title">Exam</h1>
-<p class="subtitle">Welcome, <strong>{{ user_name }}</strong>. Please answer all questions.</p>
+
+<style>
+  .choice-card {
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.85rem;
+    padding: 1.1rem 1.4rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .choice-card:hover {
+    border-color: #a5b4fc;
+    background-color: #fcfcff;
+    transform: translateX(6px);
+  }
+  
+  .choice-card.is-selected {
+    border-color: var(--primary);
+    background-color: #f5f3ff;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12), var(--shadow-sm);
+  }
+  
+  .choice-card input[type="radio"] {
+    accent-color: var(--primary);
+    transform: scale(1.2);
+    margin-right: 1rem;
+    cursor: pointer;
+  }
+  
+  .choice-text {
+    font-size: 0.95rem;
+    font-weight: 550;
+    color: var(--text-main);
+  }
+
+  .question-box {
+    border-radius: var(--radius-lg);
+    background-color: #fcfdfe;
+    border: 1px solid #f1f5f9;
+    padding: 1.75rem;
+  }
+
+  .question-text {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1.25rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .question-index {
+    color: var(--primary);
+    font-weight: 800;
+  }
+</style>
+
+<div class="exam-header-container mb-6" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:1.5rem;">
+  <div>
+    <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.45rem;">
+      {{ t('exam_title') }}
+    </h1>
+    <p class="subtitle is-6" style="color:var(--text-muted); margin-bottom:0;">
+      {{ t('exam_subtitle', name=user_name) | safe }}
+    </p>
+  </div>
+  <div>
+    <span class="badge-category">
+      {{ t('cat_' + category) }}
+    </span>
+  </div>
+</div>
 
 <form method="post" action="/exam/submit" id="exam-form">
   {% for q in questions %}
-  <div class="box mb-4">
-    <p class="has-text-weight-bold mb-3">{{ loop.index }}. {{ q.text }}</p>
-    {% for opt in q.options %}
-    <label class="radio" style="display:block; margin-bottom:0.5rem">
-      <input type="radio" name="q_{{ q.id }}" value="{{ loop.index0 }}" required>
-      &nbsp;{{ opt }}
-    </label>
-    {% endfor %}
+  <div class="box question-box mb-5">
+    <div class="question-text">
+      <span class="question-index">{{ loop.index }}.</span>
+      <span>{{ t(q.text) }}</span>
+    </div>
+    
+    <div class="choices-container">
+      {% for opt in q.options %}
+      <label class="choice-card">
+        <input type="radio" name="q_{{ q.id }}" value="{{ loop.index0 }}">
+        <span class="choice-text">{{ t(opt) }}</span>
+      </label>
+      {% endfor %}
+    </div>
   </div>
   {% endfor %}
 
-  <div class="field">
-    <button type="button" class="button is-primary is-medium" onclick="confirmSubmit()">
-      Submit Exam
+  <div class="field mt-6 has-text-centered">
+    <button type="button" class="btn-primary-gradient" onclick="confirmSubmit()">
+      🚀 {{ t('submit_btn') }}
     </button>
   </div>
 </form>
 
 <script>
+document.querySelectorAll('.choice-card').forEach(function(card) {
+  var radio = card.querySelector('input[type=radio]');
+  
+  // Set initial selected class if pre-selected
+  if (radio.checked) {
+    card.classList.add('is-selected');
+  }
+
+  // Set event listener
+  radio.addEventListener('change', function() {
+    var name = this.name;
+    document.querySelectorAll('input[name="' + name + '"]').forEach(function(r) {
+      r.closest('.choice-card').classList.remove('is-selected');
+    });
+    if (this.checked) {
+      card.classList.add('is-selected');
+    }
+  });
+
+  // Clicking the card itself triggers radio change (handled natively by label wrapping input,
+  // but label hover clicks are fully covered by browser).
+});
+
 function confirmSubmit() {
   var form = document.getElementById('exam-form');
   var radios = form.querySelectorAll('input[type=radio]');
   var names = new Set();
   var checked = new Set();
+  
   radios.forEach(function(r) {
     names.add(r.name);
     if (r.checked) checked.add(r.name);
   });
+  
   if (checked.size < names.size) {
-    alert('Please answer all questions before submitting.');
-    return;
-  }
-  if (confirm('Submit the exam now?')) {
-    form.submit();
+    if (confirm("{{ t('alert_incomplete') }}")) {
+      form.submit();
+    }
+  } else {
+    if (confirm("{{ t('confirm_submit_msg') }}")) {
+      form.submit();
+    }
   }
 }
 </script>

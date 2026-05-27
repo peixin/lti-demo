@@ -1,28 +1,83 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="columns is-centered">
-  <div class="column is-4">
-    <h1 class="title has-text-centered">Register</h1>
-    <div class="box">
-      <form method="post">
-        <div class="field">
-          <label class="label">Username</label>
-          <div class="control">
-            <input class="input" type="text" name="username" required autofocus>
-          </div>
+
+<style>
+  .login-card-container {
+    max-width: 420px;
+    margin: 2rem auto;
+    text-align: center;
+  }
+
+  .login-icon {
+    font-size: 3rem;
+    margin-bottom: 1.25rem;
+    display: inline-block;
+  }
+
+  .login-form-box {
+    background-color: #fcfdfe;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    text-align: left;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .input-custom {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 0.6rem 0.85rem;
+    font-size: 0.92rem;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-custom:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  }
+</style>
+
+<div class="login-card-container">
+  <span class="login-icon">📝</span>
+  
+  <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.4rem;">
+    {{ t('register') }}
+  </h1>
+  <p class="subtitle is-6 mb-5" style="color:var(--text-muted);">
+    {{ t('brand_sub') }}
+  </p>
+
+  <div class="login-form-box">
+    <form method="post">
+      <div class="field mb-4">
+        <label class="label" style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin-bottom:0.45rem;">
+          {{ t('username') }}
+        </label>
+        <div class="control">
+          <input class="input-custom" type="text" name="username" required autofocus>
         </div>
-        <div class="field">
-          <label class="label">Password</label>
-          <div class="control">
-            <input class="input" type="password" name="password" required>
-          </div>
+      </div>
+
+      <div class="field mb-4">
+        <label class="label" style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin-bottom:0.45rem;">
+          {{ t('password') }}
+        </label>
+        <div class="control">
+          <input class="input-custom" type="password" name="password" required>
         </div>
-        <button class="button is-success is-fullwidth mt-4">Register</button>
-      </form>
-      <p class="has-text-centered mt-4">
-        Have account? <a href="/login">Login</a>
-      </p>
-    </div>
+      </div>
+      
+      <button class="btn-primary-gradient mt-2" style="width: 100%; border-radius: var(--radius-sm) !important;">
+        ✨ {{ t('register') }}
+      </button>
+    </form>
+    
+    <p class="has-text-centered mt-4" style="font-size:0.88rem; color:var(--text-muted); font-weight:550;">
+      {{ t('have_account') }} <a href="/login" style="color:var(--primary); font-weight:700;">{{ t('login') }}</a>
+    </p>
   </div>
 </div>
+
 {% endblock %}

@@ -1,10 +1,18 @@
 """LTI 1.3 / OIDC utilities — platform side."""
-import base64, json, time, uuid
+import base64, time, uuid
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 import jwt
 from jwt.algorithms import RSAAlgorithm
+
+
+LTI    = 'https://purl.imsglobal.org/spec/lti/claim'
+LTI_AGS = 'https://purl.imsglobal.org/spec/lti-ags/claim'
+LTI_DL  = 'https://purl.imsglobal.org/spec/lti-dl/claim'
+LTI_NRPS = 'https://purl.imsglobal.org/spec/lti-nrps/claim'
+ROLE_LEARNER    = 'http://purl.imsglobal.org/vocab/lis/v2/membership#Learner'
+ROLE_INSTRUCTOR = 'http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor'
 
 
 def generate_key_pair():
@@ -37,63 +45,89 @@ def public_key_to_jwk(public_pem, kid):
             'kid': kid, 'n': _b64(nums.n), 'e': _b64(nums.e)}
 
 
-def make_id_token(private_pem, kid, iss, aud, sub, nonce,
-                  deployment_id, resource_link_id, resource_link_title,
-                  context_id, user_name, target_link_uri,
-                  lineitem_url=None, return_url=None, custom_params=None):
-    """Build and sign LTI 1.3 id_token JWT."""
+def make_id_token(*, private_pem, kid, iss, aud, sub, nonce, deployment_id,
+                  message_type, user_name, target_link_uri,
+                  resource_link=None, context=None, roles=None,
+                  lineitem_url=None, return_url=None, custom=None,
+                  for_user=None, deep_linking_settings=None, nrps_url=None):
+    """Build and sign an LTI 1.3 id_token JWT.
+
+    `message_type` selects the LTI message shape:
+      - 'LtiResourceLinkRequest'      → student/teacher launches the activity
+      - 'LtiDeepLinkingRequest'       → teacher configures content (DL flow)
+      - 'LtiSubmissionReviewRequest'  → read-only review of a user's attempt
+    """
     now = int(time.time())
     claims = {
         'iss': iss, 'sub': sub, 'aud': aud,
         'iat': now, 'exp': now + 300, 'nonce': nonce,
         'name': user_name, 'given_name': user_name,
-        'https://purl.imsglobal.org/spec/lti/claim/message_type':
-            'LtiResourceLinkRequest',
-        'https://purl.imsglobal.org/spec/lti/claim/version': '1.3.0',
-        'https://purl.imsglobal.org/spec/lti/claim/deployment_id': deployment_id,
-        'https://purl.imsglobal.org/spec/lti/claim/target_link_uri': target_link_uri,
-        'https://purl.imsglobal.org/spec/lti/claim/resource_link': {
-            'id': resource_link_id, 'title': resource_link_title,
-        },
-        'https://purl.imsglobal.org/spec/lti/claim/roles': [
-            'http://purl.imsglobal.org/vocab/lis/v2/membership#Learner',
-        ],
-        'https://purl.imsglobal.org/spec/lti/claim/context': {
-            'id': context_id,
-            'type': ['http://purl.imsglobal.org/vocab/lis/v2/course#CourseOffering'],
+        f'{LTI}/message_type':   message_type,
+        f'{LTI}/version':        '1.3.0',
+        f'{LTI}/deployment_id':  deployment_id,
+        f'{LTI}/target_link_uri': target_link_uri,
+        f'{LTI}/roles':          roles or [ROLE_LEARNER],
+        f'{LTI}/launch_presentation': {
+            'document_target': 'iframe',
+            'return_url':      return_url,
         },
     }
+    if context:
+        claims[f'{LTI}/context'] = context
+    # DeepLinkingRequest deliberately omits resource_link per spec.
+    if resource_link and message_type != 'LtiDeepLinkingRequest':
+        claims[f'{LTI}/resource_link'] = resource_link
     if lineitem_url:
-        claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint'] = {
+        claims[f'{LTI_AGS}/endpoint'] = {
             'scope': [
                 'https://purl.imsglobal.org/spec/lti-ags/scope/lineitem',
+                'https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly',
+                'https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly',
                 'https://purl.imsglobal.org/spec/lti-ags/scope/score',
             ],
             'lineitems': lineitem_url,
             'lineitem':  lineitem_url,
         }
-    if return_url:
-        claims['https://purl.imsglobal.org/spec/lti/claim/launch_presentation'] = {
-            'return_url': return_url,
+    if nrps_url:
+        claims[f'{LTI_NRPS}/namesroleservice'] = {
+            'context_memberships_url': nrps_url,
+            'service_versions': ['2.0'],
         }
-    if custom_params:
-        claims['https://purl.imsglobal.org/spec/lti/claim/custom'] = custom_params
+    if for_user:
+        claims[f'{LTI}/for_user'] = for_user
+    if deep_linking_settings:
+        claims[f'{LTI_DL}/deep_linking_settings'] = deep_linking_settings
+    if custom:
+        claims[f'{LTI}/custom'] = custom
     return jwt.encode(claims, private_pem, algorithm='RS256',
                       headers={'kid': kid})
 
 
-def verify_tool_jwt(token, tool_jwks_url, token_endpoint_url):
-    """Verify JWT Bearer assertion from tool at token endpoint."""
+def _load_jwk_from_jwks(token, jwks_url):
+    """Fetch JWKS, find the key matching token's `kid`, return RSA key object."""
     import requests as req
-    jwks = req.get(tool_jwks_url, timeout=5).json()
+    jwks = req.get(jwks_url, timeout=5).json()
     header = jwt.get_unverified_header(token)
     kid = header.get('kid')
-    key = None
     for k in jwks.get('keys', []):
         if k.get('kid') == kid:
-            key = RSAAlgorithm.from_jwk(k)
-            break
-    if not key:
-        raise ValueError(f'No JWKS key found for kid={kid!r}')
+            return RSAAlgorithm.from_jwk(k)
+    raise ValueError(f'No JWKS key found for kid={kid!r}')
+
+
+def verify_tool_jwt(token, tool_jwks_url, token_endpoint_url):
+    """Verify a Tool's JWT-Bearer client_assertion at the token endpoint."""
+    key = _load_jwk_from_jwks(token, tool_jwks_url)
     return jwt.decode(token, key, algorithms=['RS256'],
                       audience=token_endpoint_url)
+
+
+def verify_dl_response(token, tool_jwks_url, expected_aud, expected_iss):
+    """Verify a Tool's LtiDeepLinkingResponse JWT signature & claims."""
+    key = _load_jwk_from_jwks(token, tool_jwks_url)
+    claims = jwt.decode(token, key, algorithms=['RS256'],
+                        audience=expected_aud)
+    if claims.get('iss') != expected_iss:
+        raise ValueError(f"iss mismatch (got {claims.get('iss')!r}, "
+                         f"expected {expected_iss!r})")
+    return claims

@@ -1,56 +1,175 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="box mb-4">
-  <div class="level mb-2">
-    <div class="level-left">
-      <div class="level-item">
-        <div>
-          <p class="title mb-0">Submission Detail</p>
-          <div>
-            <span class="subtitle is-6 has-text-grey mb-0">{{ user_name }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="level-right">
-      <div class="level-item">
-        {% set pct = (score * 100) | int %}
-        <span class="tag is-large {% if score >= 0.6 %}is-success{% else %}is-danger{% endif %}">
-          {{ pct }}% {% if score >= 0.6 %}Passed{% else %}Failed{% endif %}
-        </span>
-      </div>
+
+<style>
+  .review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .user-badge {
+    background-color: #f1f5f9;
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .review-score-badge {
+    font-size: 1.15rem;
+    font-weight: 800;
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .review-score-badge.is-passed {
+    background-color: #ecfdf5;
+    color: #047857;
+    border: 1px solid #6ee7b7;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.15);
+  }
+
+  .review-score-badge.is-failed {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.15);
+  }
+
+  /* Table styling */
+  .table-container-custom {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    background-color: white;
+    margin-bottom: 2rem;
+  }
+
+  .table-custom {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  .table-custom th {
+    background-color: #f8fafc;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.76rem;
+    letter-spacing: 0.05em;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  .table-custom td {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+    font-weight: 550;
+  }
+
+  .table-custom tr:last-child td {
+    border-bottom: none;
+  }
+
+  .table-custom tr:hover td {
+    background-color: #fcfdfe;
+  }
+
+  .indicator-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .indicator-badge.is-correct {
+    background-color: #d1fae5;
+    color: #065f46;
+  }
+
+  .indicator-badge.is-incorrect {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+</style>
+
+<div class="review-header">
+  <div>
+    <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.45rem;">
+      🔍 {{ t('review_title') }}
+    </h1>
+    <p class="subtitle is-6" style="color:var(--text-muted); margin-bottom:0;">
+      {{ t('review_subtitle', name=user_name) | safe }}
+    </p>
+    <span class="badge-category mt-3" style="font-size:0.75rem; padding:0.3rem 0.9rem;">
+      📂 {{ t('cat_' + category) }}
+    </span>
+  </div>
+  
+  <div>
+    {% set pct = (score * 100) | int %}
+    <div class="review-score-badge {% if score >= 0.6 %}is-passed{% else %}is-failed{% endif %}">
+      <span>{{ "%g"|format(score_given) }} / {{ "%g"|format(score_maximum) }}</span>
+      <span style="font-size:0.85rem; opacity:0.8;">({{ pct }}%)</span>
     </div>
   </div>
 </div>
 
-<div class="box" style="overflow-x: auto">
-  <table class="table is-fullwidth is-striped is-hoverable is-size-7">
+<div class="table-container-custom">
+  <table class="table-custom">
     <thead>
       <tr>
-        <th style="width:2rem">#</th>
-        <th>Question</th>
-        <th>Your Answer</th>
-        <th>Correct Answer</th>
-        <th style="width:2rem"></th>
+        <th style="width: 5%">{{ t('table_index') }}</th>
+        <th style="width: 45%">{{ t('table_q') }}</th>
+        <th style="width: 20%">{{ t('table_user_ans') }}</th>
+        <th style="width: 20%">{{ t('table_correct_ans') }}</th>
+        <th style="width: 10%; text-align: center;">{{ t('table_result') }}</th>
       </tr>
     </thead>
     <tbody>
       {% for q in questions %}
       <tr>
-        <td>{{ loop.index }}</td>
-        <td>{{ q.text }}</td>
+        <td style="color: var(--text-muted); font-weight: bold;">{{ loop.index }}</td>
+        <td>{{ t(q.text) }}</td>
         <td class="{% if q.chosen == q.correct %}has-text-success{% else %}has-text-danger{% endif %}">
-          {% if q.chosen >= 0 %}{{ q.options[q.chosen] }}{% else %}—{% endif %}
+          {% if q.chosen >= 0 %}{{ t(q.options[q.chosen]) }}{% else %}—{% endif %}
         </td>
-        <td class="has-text-success">{{ q.options[q.correct] }}</td>
-        <td class="has-text-centered">{% if q.chosen == q.correct %}✓{% else %}✗{% endif %}</td>
+        <td class="has-text-success">{{ t(q.options[q.correct]) }}</td>
+        <td style="text-align: center;">
+          {% if q.chosen == q.correct %}
+            <span class="indicator-badge is-correct">✓</span>
+          {% else %}
+            <span class="indicator-badge is-incorrect">✗</span>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 
-{% if return_url %}
-<a class="button is-light" href="{{ return_url }}">← Return to Platform</a>
-{% endif %}
+<div class="mt-4">
+  {% if return_url %}
+  <a class="btn-primary-gradient" href="{{ return_url }}">
+    ⬅️ {{ t('back_to_lms') }}
+  </a>
+  {% endif %}
+</div>
+
 {% endblock %}

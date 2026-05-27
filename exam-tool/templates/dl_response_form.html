@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+  <meta charset="UTF-8">
+  <title>Submitting…</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --accent-gradient: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+      --primary: #4f46e5;
+      --bg-app: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius-lg: 16px;
+      --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+    }
+
+    body {
+      font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+    }
+
+    .transition-card {
+      background-color: var(--bg-card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      padding: 3rem 2.5rem;
+      text-align: center;
+      max-width: 450px;
+      width: 90%;
+    }
+
+    .loader-custom {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .btn-gradient {
+      background: var(--primary-gradient);
+      color: white !important;
+      border: none !important;
+      border-radius: 9999px !important;
+      padding: 0.6rem 2rem !important;
+      font-weight: 600 !important;
+      font-size: 0.9rem !important;
+      cursor: pointer;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .btn-gradient:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3), 0 4px 6px -2px rgba(79, 70, 229, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+<div class="transition-card">
+  <div class="loader-custom"></div>
+  
+  <p style="font-size: 1.35rem; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem;">
+    {{ category_label }}
+  </p>
+  
+  <p style="font-size: 0.95rem; font-weight: 600; color: var(--text-muted); margin-bottom: 2rem;">
+    {% if current_lang == 'ko' %}
+      선택 사항을 LMS로 전송 중...
+    {% elif current_lang == 'zh-TW' %}
+      正在將選擇回傳給 LMS...
+    {% elif current_lang == 'en' %}
+      Returning selection to LMS...
+    {% else %}
+      正在把选择回传给 LMS...
+    {% endif %}
+  </p>
+
+  <form method="POST" action="{{ deep_link_return_url }}" id="dl">
+    <input type="hidden" name="JWT" value="{{ jwt }}">
+    <noscript>
+      <button class="btn-gradient">
+        {% if current_lang == 'ko' %}
+          클릭하여 계속
+        {% elif current_lang == 'zh-TW' %}
+          點擊繼續
+        {% elif current_lang == 'en' %}
+          Click to continue
+        {% else %}
+          点击继续
+        {% endif %}
+      </button>
+    </noscript>
+  </form>
+</div>
+
+<script>document.getElementById('dl').submit();</script>
+</body>
+</html>

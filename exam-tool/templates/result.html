@@ -1,33 +1,229 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="columns is-centered">
-  <div class="column is-5">
-    <div class="box has-text-centered">
-      <h1 class="title">Exam Result</h1>
-      <p class="subtitle">{{ user_name }}</p>
 
+<style>
+  .result-container {
+    text-align: center;
+    padding: 1.5rem 0;
+  }
+
+  .gauge-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 2rem auto;
+  }
+
+  .gauge-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .gauge-pct {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1;
+  }
+
+  .gauge-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+  }
+
+  /* SVG circle styling */
+  .score-circle {
+    width: 180px;
+    height: 180px;
+    transform: rotate(-90deg);
+  }
+
+  .circle-bg {
+    fill: none;
+    stroke: #f1f5f9;
+    stroke-width: 8;
+  }
+
+  .circle-progress {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 251.2;
+    stroke-dashoffset: 251.2;
+    animation: fillProgress 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fillProgress {
+    to {
+      stroke-dashoffset: {{ 251.2 - (251.2 * score) }};
+    }
+  }
+
+  /* Sync status card */
+  .sync-card {
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    margin: 2.5rem 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: left;
+    max-width: 500px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .sync-card.is-synced {
+    background-color: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+  }
+
+  .sync-card.is-offline {
+    background-color: #f8fafc;
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+
+  .sync-icon {
+    font-size: 1.5rem;
+  }
+
+  .sync-text-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sync-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #047857;
+  }
+
+  .sync-card.is-offline .sync-title {
+    color: var(--text-muted);
+  }
+
+  .sync-desc {
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  .score-breakdown-grid {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-bottom: 2rem;
+  }
+
+  .breakdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .breakdown-val {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .breakdown-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+</style>
+
+<div class="result-container">
+  <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.5rem;">
+    🏆 {{ t('result_title') }}
+  </h1>
+  <p class="subtitle is-6" style="color:var(--text-muted);">
+    {{ t('result_subtitle', name=user_name) | safe }}
+  </p>
+
+  <!-- SVG Circular Score Gauge -->
+  <div class="gauge-container">
+    <svg class="score-circle" viewBox="0 0 100 100">
+      <circle class="circle-bg" cx="50" cy="50" r="40" />
+      <circle class="circle-progress" cx="50" cy="50" r="40" 
+              stroke="url(#gaugeGrad)" />
+      
+      <defs>
+        <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#4f46e5" />
+          <stop offset="100%" stop-color="#06b6d4" />
+        </linearGradient>
+      </defs>
+    </svg>
+    
+    <div class="gauge-overlay">
       {% set pct = (score * 100) | int %}
-      <p class="is-size-1 has-text-weight-bold
-                 {% if score >= 0.6 %}has-text-success{% else %}has-text-danger{% endif %}">
-        {{ pct }}%
-      </p>
-
-      <p class="is-size-5 mt-2">
-        {% if score >= 0.6 %}
-        <span class="tag is-success is-large">Passed ✓</span>
-        {% else %}
-        <span class="tag is-danger is-large">Failed ✗</span>
-        {% endif %}
-      </p>
-
-      <p class="mt-5 is-size-7 has-text-grey">
-        Score has been reported back to the platform via LTI Basic Outcomes.
-      </p>
-
-      {% if return_url %}
-      <a class="button is-link mt-4" href="{{ return_url }}">← Return to Platform</a>
-      {% endif %}
+      <span class="gauge-pct">{{ pct }}%</span>
+      <span class="gauge-label">{{ t('result_correct_rate') }}</span>
     </div>
   </div>
+
+  <!-- Score Breakdown Info Grid -->
+  <div class="score-breakdown-grid">
+    <div class="breakdown-item">
+      <span class="breakdown-val" style="color:var(--primary);">
+        {{ "%g"|format(score_given) }}
+      </span>
+      <span class="breakdown-label">{{ t('result_score') }}</span>
+    </div>
+    <div class="breakdown-item" style="border-left: 1px solid var(--border); padding-left: 3rem;">
+      <span class="breakdown-val">
+        {{ "%g"|format(score_maximum) }}
+      </span>
+      <span class="breakdown-label">{{ t('result_max') }}</span>
+    </div>
+  </div>
+
+  <span class="badge-category mb-4">
+    {{ t('cat_' + category) }}
+  </span>
+
+  <br>
+
+  <!-- LMS Sync Status Alert Bar -->
+  {% if ags_enabled %}
+  <div class="sync-card is-synced">
+    <span class="sync-icon">✅</span>
+    <div class="sync-text-container">
+      <span class="sync-title">{{ t('result_sync_status') }}</span>
+      <span class="sync-desc">{{ t('result_sync_success') }}</span>
+    </div>
+  </div>
+  {% else %}
+  <div class="sync-card is-offline">
+    <span class="sync-icon">🛡️</span>
+    <div class="sync-text-container">
+      <span class="sync-title">{{ t('result_sync_status') }}</span>
+      <span class="sync-desc">{{ t('result_sync_offline') }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="mt-4">
+    {% if return_url %}
+    <a class="btn-primary-gradient" href="{{ return_url }}">
+      ⬅️ {{ t('back_to_lms') }}
+    </a>
+    {% endif %}
+  </div>
 </div>
+
 {% endblock %}

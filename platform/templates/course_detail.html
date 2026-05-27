@@ -1,100 +1,277 @@
 {% extends 'base.html' %}
 {% block content %}
-<nav class="breadcrumb mb-4">
-  <ul>
-    <li><a href="/">Dashboard</a></li>
-    <li class="is-active"><a>{{ course.name }}</a></li>
-  </ul>
-</nav>
 
-<h1 class="title">{{ course.name }}</h1>
+<style>
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .breadcrumb-custom {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .breadcrumb-custom a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .breadcrumb-custom a:hover {
+    color: var(--primary);
+  }
+
+  .activity-card {
+    background-color: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+  }
+
+  .activity-card:hover {
+    border-color: #a5b4fc;
+    box-shadow: var(--shadow-md);
+  }
+
+  .section-box {
+    background-color: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-sm);
+    height: 100%;
+  }
+
+  .section-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
+
+  .input-custom {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.88rem;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-custom:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+  }
+
+  .select-custom {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.88rem;
+    width: 100%;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .select-custom:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  /* Table styling */
+  .table-custom {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .table-custom th {
+    background-color: #f8fafc;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  .table-custom td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+    font-weight: 550;
+  }
+
+  .table-custom tr:last-child td {
+    border-bottom: none;
+  }
+
+  .table-custom tr:hover td {
+    background-color: #fcfdfe;
+  }
+</style>
+
+<div class="breadcrumb-custom">
+  <a href="/">🏠 {{ t('home') }}</a>
+  <span>/</span>
+  <span style="color:var(--text-main); font-weight:700;">{{ course.name }}</span>
+</div>
+
+<div class="detail-header">
+  <div>
+    <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.25rem;">
+      📖 {{ course.name }}
+    </h1>
+    <span class="tag is-info is-light" style="font-weight:600; font-size:0.75rem;">{{ t('course_console') }}</span>
+  </div>
+</div>
+
+{% if dl_done_act %}
+<div class="notification is-success is-light" style="border-radius: var(--radius-md); font-size: 0.85rem; padding: 1.1rem 1.4rem; margin-bottom: 1.5rem;">
+  <strong>✓ {{ t('deep_link_success') }}</strong>
+  {{ t('activity') }} <em>{{ dl_done_act.name }}</em> {{ t('dl_success_linked') }}
+  <code>{{ dl_done_act.deep_link_uri }}</code>
+  {% if dl_done_act.dl_custom %}
+    (custom:
+    {% for k, v in dl_done_act.dl_custom.items() %}<code>{{ k }}={{ v }}</code>{{ ", " if not loop.last }}{% endfor %})
+  {% endif %}
+</div>
+{% endif %}
 
 <div class="columns">
-  <!-- Activities column -->
+  <!-- Left column: Activities list & Add form -->
   <div class="column is-7">
-    <div class="box">
-      <h2 class="subtitle">Activities</h2>
+    <div class="section-box">
+      <h2 class="section-title">🏃‍♂️ {{ t('activities') }}</h2>
 
       {% if tools %}
-      <form method="post" action="/courses/{{ course.id }}/activities/add" class="mb-5">
-        <div class="field">
-          <label class="label">Activity name</label>
+      <form method="post" action="/courses/{{ course.id }}/activities/add" class="mb-5" style="background-color:#f8fafc; border:1px dashed var(--border); border-radius:var(--radius-md); padding:1.25rem;">
+        <div class="field mb-3">
+          <label class="label" style="font-size:0.78rem; font-weight:700; color:var(--text-main); margin-bottom:0.35rem;">
+            {{ t('activity_name') }}
+          </label>
           <div class="control">
-            <input class="input" type="text" name="name" placeholder="e.g. Chapter 1 Quiz" required>
+            <input class="input-custom" type="text" name="name" placeholder="e.g. Chapter 1 Quiz" required>
           </div>
         </div>
-        <div class="field">
-          <label class="label">Tool</label>
+        <div class="field mb-4">
+          <label class="label" style="font-size:0.78rem; font-weight:700; color:var(--text-main); margin-bottom:0.35rem;">
+            {{ t('tool') }}
+          </label>
           <div class="control">
-            <div class="select is-fullwidth">
-              <select name="tool_id" required>
-                {% for t in tools %}
-                <option value="{{ t.id }}">{{ t.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
+            <select class="select-custom" name="tool_id" required>
+              {% for tool in tools %}
+              <option value="{{ tool.id }}">{{ tool.name }}</option>
+              {% endfor %}
+            </select>
           </div>
         </div>
-        <button class="button is-success">+ Add Activity</button>
+        <button class="btn-primary-gradient" style="border-radius:var(--radius-sm) !important; padding:0.45rem 1.5rem !important; font-size:0.82rem !important; width:100%;">
+          ➕ {{ t('add_activity') }}
+        </button>
       </form>
       {% else %}
-      <div class="notification is-warning is-light">
-        No tools registered yet. <a href="/tools/add">Register a tool</a> first.
+      <div class="notification is-danger is-light mb-5" style="border-radius: var(--radius-sm); font-size: 0.85rem; padding: 1rem 1.25rem;">
+        ⚠️ {{ t('no_tools_warning') }} <a href="/tools/add" style="color:var(--primary); font-weight:700; text-decoration:underline;">{{ t('register_tool_link') }}</a>.
       </div>
       {% endif %}
 
       {% for act in activities %}
-      <div class="card mb-3">
-        <div class="card-content py-3">
-          <div class="level mb-0">
-            <div class="level-left">
-              <div>
-                <p class="has-text-weight-semibold">{{ act.name }}</p>
-                <p class="is-size-7 has-text-grey">{{ act.tool_name }}</p>
-              </div>
-            </div>
-            <div class="level-right">
-              <a href="/lti/launch/{{ act.id }}" class="button is-primary is-small">
-                Launch ↗
-              </a>
-            </div>
+      <div class="activity-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <p style="font-weight:800; font-size:0.95rem; color:var(--text-main); margin-bottom:0.25rem;">⚡ {{ act.name }}</p>
+            <p style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">🛠️ {{ act.tool_name }}</p>
+            
+            {% if act.deep_link_uri %}
+            <p style="font-size:0.75rem; margin-top:0.4rem;">
+              <span class="tag is-success is-light" style="font-weight:700; font-size:0.68rem; border-radius:var(--radius-sm);">DeepLink ✓</span>
+              {% if act.dl_custom %}
+                {% for k, v in act.dl_custom.items() %}
+                  <span class="tag is-light ml-1" style="font-weight:600; font-size:0.68rem; border-radius:var(--radius-sm);"><code>{{ k }}={{ v }}</code></span>
+                {% endfor %}
+              {% endif %}
+            </p>
+            {% else %}
+            <p style="font-size:0.75rem; margin-top:0.4rem;">
+              <span class="tag is-warning is-light" style="font-weight:700; font-size:0.68rem; border-radius:var(--radius-sm);">{{ t('dl_not_configured') }}</span>
+            </p>
+            {% endif %}
+          </div>
+          
+          <div style="display:flex; gap:0.5rem;">
+            <a href="/lti/dl/{{ act.id }}" class="button is-small is-light" style="font-weight:600; border-radius:var(--radius-sm);">
+              ⚙️ {% if act.deep_link_uri %}{{ t('reconfigure_dl') }}{% else %}{{ t('configure_dl') }}{% endif %}
+            </a>
+            <a href="/lti/launch/{{ act.id }}" class="btn-primary-gradient" style="border-radius:var(--radius-sm) !important; padding:0.3rem 0.85rem !important; font-size:0.78rem !important; font-weight:700 !important;">
+              🚀 {{ t('launch_tool') }}
+            </a>
           </div>
         </div>
       </div>
       {% else %}
-      <p class="has-text-grey">No activities yet.</p>
+      <p style="font-size:0.85rem; color:var(--text-muted); font-weight:550; text-align:center; padding:1.5rem 0;">
+        🏜️ {{ t('no_activities') }}
+      </p>
       {% endfor %}
     </div>
   </div>
 
-  <!-- Gradebook column -->
+  <!-- Right column: Gradebook -->
   <div class="column is-5">
-    <div class="box">
-      <h2 class="subtitle">Gradebook</h2>
+    <div class="section-box">
+      <h2 class="section-title">📊 {{ t('gradebook') }}</h2>
+      
       {% if grades %}
-      <table class="table is-fullwidth is-striped is-hoverable is-size-7">
+      <table class="table-custom">
         <thead>
           <tr>
-            <th>Student</th>
-            <th>Score</th>
-            <th>Submitted</th>
-            <th></th>
+            <th>{{ t('student') }}</th>
+            <th style="width:25%;">{{ t('score') }}</th>
+            <th style="width:30%;">{{ t('submitted') }}</th>
+            <th style="width:10%;"></th>
           </tr>
         </thead>
         <tbody>
           {% for gr in grades %}
           <tr>
-            <td>{{ gr.username }}</td>
+            <td style="font-weight:700;">{{ gr.username }}</td>
             <td>
-              <span class="tag {% if gr.score >= 0.6 %}is-success{% else %}is-danger{% endif %}">
+              <span class="tag {% if gr.score >= 0.6 %}is-success{% else %}is-danger{% endif %} is-light" style="font-weight:800; border-radius:var(--radius-sm);">
                 {{ "%.0f"|format(gr.score * 100) }}%
               </span>
             </td>
-            <td>{{ gr.updated_at[:16] }}</td>
-            <td>
+            <td style="color:var(--text-muted); font-size:0.75rem;">
+              <span class="local-time" data-utc="{{ gr.updated_at }}">{{ gr.updated_at[:16] }}</span>
+            </td>
+            <td style="text-align:right;">
               <a class="button is-small is-light"
-                 href="/lti/launch_detail/{{ gr.activity_id }}/{{ gr.user_id }}">
-                Detail ↗
+                 href="/lti/launch_review/{{ gr.activity_id }}/{{ gr.user_id }}"
+                 style="font-weight:600; border-radius:var(--radius-sm);"
+                 title="LtiSubmissionReviewRequest">
+                {{ t('review') }}
               </a>
             </td>
           </tr>
@@ -102,9 +279,12 @@
         </tbody>
       </table>
       {% else %}
-      <p class="has-text-grey">No grades yet. Grades appear here after students complete the exam.</p>
+      <p style="font-size:0.85rem; color:var(--text-muted); font-weight:550; text-align:center; padding:2rem 0; line-height:1.5;">
+        📭 {{ t('no_grades') }}
+      </p>
       {% endif %}
     </div>
   </div>
 </div>
+
 {% endblock %}

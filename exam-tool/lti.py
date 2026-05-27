@@ -1,5 +1,6 @@
 """LTI 1.3 / OIDC utilities — tool side."""
 import base64, time, uuid
+from datetime import datetime, timezone
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -54,8 +55,14 @@ def verify_id_token(token, platform_jwks_url, client_id, platform_iss):
                       audience=client_id, issuer=platform_iss)
 
 
-def get_access_token(platform_token_url, private_pem, kid, client_id):
-    """Request AGS access token from platform using JWT Bearer grant."""
+def iso_utc_now():
+    """ISO 8601 UTC timestamp (seconds precision, 'Z' suffix)."""
+    return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
+def get_access_token(platform_token_url, private_pem, kid, client_id,
+                     scope='https://purl.imsglobal.org/spec/lti-ags/scope/score'):
+    """Request AGS access token from platform via JWT Bearer grant."""
     import requests as req
 
     now = int(time.time())
@@ -71,32 +78,63 @@ def get_access_token(platform_token_url, private_pem, kid, client_id):
         'client_assertion_type':
             'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
         'client_assertion': assertion,
-        'scope': ('https://purl.imsglobal.org/spec/lti-ags/scope/lineitem '
-                  'https://purl.imsglobal.org/spec/lti-ags/scope/score'),
+        'scope': scope,
     }, timeout=10)
     resp.raise_for_status()
     return resp.json()['access_token']
 
 
-def post_score(access_token, lineitem_url, sub, score):
-    """Submit score to platform via AGS."""
+def post_score(access_token, lineitem_url, user_id, score_given, score_maximum,
+               timestamp, activity_progress='Completed',
+               grading_progress='FullyGraded'):
+    """Submit a score event to platform via AGS.
+
+    `score_given` / `score_maximum` use Tool's raw scale (do NOT normalize to 100).
+    `timestamp` should be a unique ISO 8601 UTC string per attempt
+    (use the same value on retries for idempotency).
+    """
     import requests as req
-    from datetime import datetime, timezone
 
     resp = req.post(
         lineitem_url.rstrip('/') + '/scores',
         json={
-            'userId': sub,
-            'activityProgress': 'Completed',
-            'gradingProgress': 'FullyGraded',
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'scoreGiven': round(score * 100, 2),
-            'scoreMaximum': 100,
+            'userId':           str(user_id),
+            'scoreGiven':       score_given,
+            'scoreMaximum':     score_maximum,
+            'activityProgress': activity_progress,
+            'gradingProgress':  grading_progress,
+            'timestamp':        timestamp,
         },
         headers={
             'Authorization': f'Bearer {access_token}',
-            'Content-Type': 'application/vnd.ims.lis.v1.score+json',
+            'Content-Type':  'application/vnd.ims.lis.v1.score+json',
         },
         timeout=10,
     )
     resp.raise_for_status()
+
+
+def make_dl_response_jwt(private_pem, kid, client_id, platform_iss,
+                         deployment_id, data, content_items):
+    """Sign an LtiDeepLinkingResponse JWT to form-POST back to the platform.
+
+    `data` must be echoed back unchanged from the request's deep_linking_settings.
+    `content_items` should be a list with a single ltiResourceLink dict.
+    """
+    now = int(time.time())
+    claims = {
+        'iss':   client_id,
+        'sub':   client_id,
+        'aud':   platform_iss,
+        'iat':   now,
+        'exp':   now + 300,
+        'nonce': uuid.uuid4().hex,
+        'https://purl.imsglobal.org/spec/lti/claim/message_type':
+            'LtiDeepLinkingResponse',
+        'https://purl.imsglobal.org/spec/lti/claim/deployment_id': deployment_id,
+        'https://purl.imsglobal.org/spec/lti/claim/version':       '1.3.0',
+        'https://purl.imsglobal.org/spec/lti-dl/claim/data':          data,
+        'https://purl.imsglobal.org/spec/lti-dl/claim/content_items': content_items,
+    }
+    return jwt.encode(claims, private_pem, algorithm='RS256',
+                      headers={'kid': kid})

@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+  .need-dl-container {
+    text-align: center;
+    padding: 2rem 1rem;
+    max-width: 650px;
+    margin: 0 auto;
+  }
+
+  .info-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    animation: pulseIcon 2s infinite ease-in-out;
+    display: inline-block;
+  }
+
+  @keyframes pulseIcon {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+
+  .instructions-box {
+    background-color: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem 1.75rem;
+    text-align: left;
+    margin: 2.25rem 0;
+  }
+
+  .instructions-box p {
+    font-size: 0.95rem;
+    font-weight: 550;
+    color: var(--text-main);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .category-pill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .category-pill {
+    background-color: #ffffff;
+    border: 1px solid var(--border);
+    padding: 0.45rem 1.15rem;
+    border-radius: 9999px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .technical-notice {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    border-top: 1px dashed var(--border);
+    padding-top: 1.25rem;
+    font-weight: 500;
+  }
+</style>
+
+<div class="need-dl-container">
+  <span class="info-icon">🧩</span>
+  
+  <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.5rem;">
+    {{ t('need_dl_title') }}
+  </h1>
+  <p class="subtitle is-6" style="color:var(--text-muted);">
+    {{ t('need_dl_subtitle', name=user_name) | safe }}
+  </p>
+
+  <div class="instructions-box">
+    <p>{{ t('need_dl_desc') }}</p>
+    
+    <div class="category-pill-list">
+      <span class="category-pill">{{ t('cat_art') }}</span>
+      <span class="category-pill">{{ t('cat_cs') }}</span>
+      <span class="category-pill">{{ t('cat_history') }}</span>
+    </div>
+
+    <div class="technical-notice">
+      ℹ️ {{ t('need_dl_technical') }}
+    </div>
+  </div>
+
+  {% if return_url %}
+  <a class="btn-primary-gradient" href="{{ return_url }}">
+    ⬅️ {{ t('back_to_lms') }}
+  </a>
+  {% endif %}
+</div>
+
+{% endblock %}

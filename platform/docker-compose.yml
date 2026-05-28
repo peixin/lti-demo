@@ -1,0 +1,18 @@
+services:
+  platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lti-platform
+    ports:
+      - "${PORT:-8001}:${PORT:-8001}"
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - PORT=${PORT:-8001}
+      - DATABASE=${DATABASE:-/app/data/platform.db}
+      - SECRET_KEY=${SECRET_KEY:-platform-demo-secret-change-in-prod}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

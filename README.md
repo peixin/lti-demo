@@ -1,94 +1,41 @@
 # LTI 1.3 Demo
 
-A minimal, self-contained demo of the [LTI 1.3](https://www.imsglobal.org/spec/lti/v1p3/) (Learning Tools Interoperability) standard — two independent services that talk to each other over the full OIDC launch flow with grade passback via AGS.
-
-LTI 1.3 标准的最小化完整实现 Demo —— 两个独立服务通过完整 OIDC 启动流程互通，并支持 AGS 成绩回传。
+[简体中文](README.cn.md)
 
 ---
 
-## What's inside / 项目结构
+A minimal, end-to-end self-contained implementation of the **LTI 1.3** (Learning Tools Interoperability) standard, featuring two completely independent services that communicate over the OIDC launch flow with grade passback via AGS.
 
-| Service | Port | Role |
-|---|---|---|
-| `platform/` | 8001 | LMS — manages users, courses, activities, grades |
-| `exam-tool/` | 8002 | LTI Tool — delivers online exams, reports scores |
+### ✨ Core Highlights & Promotional Features
+- **100% Raw Reference Code**: Written in plain Python Flask with raw SQLite queries and zero heavy ORMs, making it the ultimate educational sandbox to understand the core handshake mechanics of LTI 1.3.
+- **Enterprise-Grade Security Sandbox**: Real asymmetric RSA-2048 keypair generation (JWKS), real RS256 token signing (PyJWT), OIDC form_post launching, and full JWT claims validation.
+- **Multi-Language (i18n) Support**: Fully localized in English, Chinese (Simplified & Traditional), and Korean out of the box, with automatic browser language detection and instant switchers.
+- **Aesthetic Bulma UI**: Powered by Jinja2 and Bulma CSS via CDN with subtle modern micro-animations, providing a high-premium developer UI without any heavy node build steps.
 
-Both services are plain Flask + SQLite, no ORM, no frontend build step.  
-两个服务均为 Flask + SQLite，无 ORM，无前端构建步骤。
+### 🛡️ LTI 1.3 Specs & Protocols Supported
+This project supports the complete core LTI 1.3 specification suite:
+- **OIDC Core Launch (LtiResourceLinkRequest)**: Handles secure authentication and single-sign-on launch flows for student exam attempts.
+- **Deep Linking 2.0 (LtiDeepLinkingRequest / Response)**: Enables instructors to securely open the Tool's course selector page and select specific exam categories, posting links and parameters back to the Platform.
+- **Assignment and Grade Services (AGS 2.0)**: Supports synchronous column mapping (Lineitems), score submission with idempotency protection, and grades read-back (Results).
+- **Names and Role Provisioning Services (NRPS)**: Dynamically fetches class rosters and memberships from the LMS Platform database.
+- **Submission Review (LtiSubmissionReviewRequest)**: Safely redirects instructors from the LMS gradebook directly to a read-only review of a student's specific attempt on the Tool.
 
----
+### 🧬 Custom Extensions & Claims
+We implemented real-world production claim overrides:
+- **`custom.category`**: Route custom question categories securely based on LTI parameter bindings.
+- **`custom.tool_event_id` / `submissionId`**: Custom idempotency variables linked to specific exam attempts to enable multi-level fallback submission reviews.
+- **`answering_duration`**: Measures and displays the exact duration taken by the student to finish the exam.
 
-## Docs / 文档
-
-- [Technical Reference](docs/technical.md) — architecture, DB schema, routes, LTI 1.3 flow diagrams
-- [LTI Guide](docs/lti-guide.md) — LTI concepts from scratch, OIDC flow, JWT, AGS explained in depth
-
----
-
-## Requirements / 环境要求
-
-- Python 3.12+
-- [Poetry](https://python-poetry.org/)
-- [just](https://github.com/casey/just)
-
----
-
-## Setup / 启动步骤
-
-**1. Install dependencies / 安装依赖**
-
-```bash
-just install
-```
-
-**2. Start both services / 启动两个服务**
-
-```bash
-just dev
-```
-
-Or start them separately / 或分别启动：
-
-```bash
-just platform   # http://localhost:8001
-just exam-tool  # http://localhost:8002
-```
+### 📂 Standalone Decoupled Dockerization
+Both services have been fully containerized and decoupled as **two separate standalone projects** running Flask on Python 3.12 with SQLite databases:
+- **Independent Environments**: Managed by local `.env` files.
+- **Persistent SQLite Mappings**: Host directories are mounted under `./data/` for both projects to store `platform.db` and `exam-tool.db` robustly.
+- **Local Building**: Custom scripts (`build.sh`) are provided to compile local images natively.
 
 ---
 
-## First-time configuration / 首次配置
+### 🚀 Quick Start Guides
+For detailed setup and execution instructions of each individual service, please refer to their respective READMEs:
 
-LTI requires a one-time registration handshake between Platform and Tool.  
-LTI 需要在 Platform 和 Tool 之间完成一次注册配置。
-
-**Step 1 — Register the Tool on the Platform / 在 Platform 注册 Tool**
-
-1. Open [http://localhost:8001/tools/add](http://localhost:8001/tools/add)
-2. Fill in the Tool's endpoints (copy from exam-tool admin page):
-   - Login URL: `http://localhost:8002/lti/login`
-   - Redirect URI: `http://localhost:8002/lti/launch`
-   - JWKS URL: `http://localhost:8002/lti/jwks`
-   - Target Link URI: `http://localhost:8002/exam`
-3. Submit — Platform auto-generates a `client_id` and `deployment_id`
-
-**Step 2 — Configure the Tool with Platform credentials / 在 Tool 填入 Platform 配置**
-
-1. Open [http://localhost:8002/admin](http://localhost:8002/admin) (default password: `admin`)
-2. Copy the Platform OIDC endpoints from [http://localhost:8001/tools](http://localhost:8001/tools)
-3. Fill in and save: ISS, Client ID, Deployment ID, OIDC Auth URL, JWKS URL, Token URL
-
-**Step 3 — Launch / 启动考试**
-
-1. Log in at [http://localhost:8001](http://localhost:8001) (register a user first)
-2. Create a course, add an activity linked to the exam tool
-3. Click the activity — the LTI 1.3 launch flow runs automatically
-4. Complete the exam — score is passed back to the Platform via AGS
-
----
-
-## Tech stack / 技术栈
-
-- **Backend**: Python, Flask, SQLite (raw SQL)
-- **Frontend**: Jinja2 templates, [Bulma CSS](https://bulma.io/) via CDN
-- **LTI auth**: PyJWT + cryptography (RS256, RSA-2048)
-- **Standard**: [LTI 1.3](https://www.imsglobal.org/spec/lti/v1p3/) + [AGS](https://www.imsglobal.org/spec/lti-ags/v2p0/)
+* 🏫 **LMS Platform Service**: Go to [platform/README.md](platform/README.md) to manage users, courses, and tool registrations.
+* 📝 **Exam Tool Service**: Go to [exam-tool/README.md](exam-tool/README.md) to manage exam deliveries and LTI launch payloads.

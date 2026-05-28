@@ -1,0 +1,19 @@
+services:
+  exam-tool:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lti-exam-tool
+    ports:
+      - "${PORT:-8002}:${PORT:-8002}"
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - PORT=${PORT:-8002}
+      - DATABASE=${DATABASE:-/app/data/exam-tool.db}
+      - SECRET_KEY=${SECRET_KEY:-exam-tool-demo-secret-change-in-prod}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

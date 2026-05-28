@@ -120,6 +120,11 @@
     <span class="badge-category mt-3" style="font-size:0.75rem; padding:0.3rem 0.9rem;">
       📂 {{ t('cat_' + category) }}
     </span>
+    {% if submitted_at %}
+    <span class="badge-info mt-3 ml-2" style="font-size:0.75rem; padding:0.3rem 0.9rem; background-color:#f1f5f9; color:var(--text-muted); border:1px solid var(--border); font-weight:600; border-radius:var(--radius-sm); display:inline-flex; align-items:center; gap:0.25rem;">
+      📅 {{ t('submit_at') }}: <span class="local-time" data-utc="{{ submitted_at }}">{{ submitted_at }}</span>
+    </span>
+    {% endif %}
   </div>
   
   <div>

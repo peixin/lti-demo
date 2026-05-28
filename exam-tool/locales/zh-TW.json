@@ -17,6 +17,7 @@
   "result_sync_status": "成績同步狀態",
   "result_sync_success": "成績已實時同步至學習平台 (LMS)",
   "result_sync_offline": "本地測試模式 (未回傳平台成績)",
+  "submit_at": "提交時間",
   "back_to_lms": "返回學習平台 (LMS)",
   "need_dl_title": "活動未關聯分類",
   "need_dl_subtitle": "你好，<strong>{name}</strong>。本活動尚未配置題集分類。",

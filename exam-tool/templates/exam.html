@@ -79,7 +79,8 @@
   </div>
 </div>
 
-<form method="post" action="/exam/submit" id="exam-form">
+<form method="post" action="{{ url_for('submit_exam', lti_session_id=lti_session_id) }}" id="exam-form">
+  <input type="hidden" name="lti_session_id" value="{{ lti_session_id }}">
   {% for q in questions %}
   <div class="box question-box mb-5">
     <div class="question-text">

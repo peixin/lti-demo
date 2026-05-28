@@ -17,6 +17,7 @@
   "result_sync_status": "Grade Sync Status",
   "result_sync_success": "Grade has been synced successfully to the Learning Management System (LMS) in real-time.",
   "result_sync_offline": "Local Test Mode (No grade back-transmission configured)",
+  "submit_at": "Submitted At",
   "back_to_lms": "Return to Learning Platform (LMS)",
   "need_dl_title": "Activity Not Configured",
   "need_dl_subtitle": "Hello, <strong>{name}</strong>. This activity has not been linked to a question category yet.",

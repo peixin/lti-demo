@@ -17,6 +17,7 @@
   "result_sync_status": "점수 연동 상태",
   "result_sync_success": "점수가 학습 관리 플랫폼(LMS)에 실시간으로 성공적으로 동기화되었습니다.",
   "result_sync_offline": "로컬 테스트 모드 (점수 피드백 미설정)",
+  "submit_at": "제출 시간",
   "back_to_lms": "학습 플랫폼(LMS)으로 돌아가기",
   "need_dl_title": "활동 설정되지 않음",
   "need_dl_subtitle": "안녕하세요, <strong>{name}</strong>님. 이 활동은 아직 문항 카테고리와 연동되지 않았습니다.",

@@ -343,7 +343,8 @@
       </button>
       <div class="lang-dropdown" id="langDropdown">
         {% for code, info in TRANSLATIONS.items() %}
-          <a href="/set-lang/{{ code }}" class="lang-item {% if current_lang == code %}is-active{% endif %}">
+          <a href="#" onclick="switchLang('{{ code }}'); return false;"
+             class="lang-item {% if current_lang == code %}is-active{% endif %}">
             {{ info.lang_name }}
           </a>
         {% endfor %}
@@ -373,6 +374,17 @@
 </footer>
 
 <script>
+  function switchLang(code) {
+    // Use window.location to capture full path + query string (request.path
+    // in Jinja only gives the path, dropping lti_session_id etc.).
+    // Also avoids redirecting to POST-only endpoints like /lti/launch.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('lang');  // remove stale ?lang= param
+    const nextPath = url.pathname + (url.search || '');
+    window.location.href = '/set-lang/' + encodeURIComponent(code)
+                         + '?next=' + encodeURIComponent(nextPath);
+  }
+
   function toggleLangDropdown(event) {
     event.stopPropagation();
     const dropdown = document.getElementById('langDropdown');

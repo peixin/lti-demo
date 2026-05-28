@@ -86,25 +86,32 @@ def get_access_token(platform_token_url, private_pem, kid, client_id,
 
 def post_score(access_token, lineitem_url, user_id, score_given, score_maximum,
                timestamp, activity_progress='Completed',
-               grading_progress='FullyGraded'):
+               grading_progress='FullyGraded', submission_id=None):
     """Submit a score event to platform via AGS.
 
     `score_given` / `score_maximum` use Tool's raw scale (do NOT normalize to 100).
     `timestamp` should be a unique ISO 8601 UTC string per attempt
     (use the same value on retries for idempotency).
+    `submission_id` is the Tool's own stable attempt identifier (≤ 64 chars).
+    The platform stores it as tool_event_id and echoes it back in SR launches
+    via custom.tool_event_id, so the Tool can look up the exact attempt row.
     """
     import requests as req
 
+    body = {
+        'userId':           str(user_id),
+        'scoreGiven':       score_given,
+        'scoreMaximum':     score_maximum,
+        'activityProgress': activity_progress,
+        'gradingProgress':  grading_progress,
+        'timestamp':        timestamp,
+    }
+    if submission_id:
+        body['submissionId'] = submission_id
+
     resp = req.post(
         lineitem_url.rstrip('/') + '/scores',
-        json={
-            'userId':           str(user_id),
-            'scoreGiven':       score_given,
-            'scoreMaximum':     score_maximum,
-            'activityProgress': activity_progress,
-            'gradingProgress':  grading_progress,
-            'timestamp':        timestamp,
-        },
+        json=body,
         headers={
             'Authorization': f'Bearer {access_token}',
             'Content-Type':  'application/vnd.ims.lis.v1.score+json',

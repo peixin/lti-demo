@@ -77,8 +77,9 @@ CREATE TABLE IF NOT EXISTS score_events (
     activity_progress TEXT NOT NULL,
     grading_progress  TEXT NOT NULL,
     timestamp         TEXT NOT NULL,
+    tool_event_id     TEXT NOT NULL,
     created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(lineitem_id, user_id, timestamp)
+    UNIQUE(lineitem_id, user_id, tool_event_id)
 );
 CREATE TABLE IF NOT EXISTS access_tokens (
     token      TEXT PRIMARY KEY,
@@ -201,6 +202,35 @@ def migrate_db():
         if 'deep_link_custom' not in acols:
             db.execute('ALTER TABLE activities ADD COLUMN deep_link_custom TEXT')
         db.commit()
+        # score_events: add tool_event_id (NOT NULL UNIQUE per activity+user).
+        # SQLite can't ADD NOT NULL columns directly, so rebuild the table.
+        evcols = {row[1] for row in db.execute('PRAGMA table_info(score_events)').fetchall()}
+        if 'tool_event_id' not in evcols:
+            db.executescript('''
+                CREATE TABLE score_events_v2 (
+                    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                    lineitem_id       INTEGER NOT NULL,
+                    user_id           INTEGER NOT NULL,
+                    score_given       REAL,
+                    score_maximum     REAL,
+                    activity_progress TEXT NOT NULL,
+                    grading_progress  TEXT NOT NULL,
+                    timestamp         TEXT NOT NULL,
+                    tool_event_id     TEXT NOT NULL,
+                    created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(lineitem_id, user_id, tool_event_id)
+                );
+                INSERT INTO score_events_v2
+                    (id, lineitem_id, user_id, score_given, score_maximum,
+                     activity_progress, grading_progress, timestamp, tool_event_id, created_at)
+                SELECT id, lineitem_id, user_id, score_given, score_maximum,
+                       activity_progress, grading_progress, timestamp,
+                       timestamp AS tool_event_id, created_at
+                FROM score_events;
+                DROP TABLE score_events;
+                ALTER TABLE score_events_v2 RENAME TO score_events;
+            ''')
+            db.commit()
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -565,7 +595,19 @@ def _sign_submission_review(hint, client_id, tool, config, iss, login_hint,
     target_link_uri = activity['deep_link_uri'] or tool['target_link_uri']
     custom = json.loads(activity['deep_link_custom']) if activity['deep_link_custom'] else {}
     if event_id:
-        custom['event_id'] = event_id
+        # Look up the tool_event_id stored when the Tool posted this score event.
+        # This is the Tool's own submissionId (or timestamp fallback), NOT the LMS
+        # auto-increment primary key — so the Tool can directly locate its attempt row.
+        li_for_event = db.execute(
+            'SELECT * FROM lineitems WHERE activity_id=? AND tag IS NULL', [activity_id]
+        ).fetchone()
+        if li_for_event:
+            ev = db.execute(
+                'SELECT tool_event_id FROM score_events WHERE id=? AND lineitem_id=?',
+                [event_id, li_for_event['id']]
+            ).fetchone()
+            if ev:
+                custom['tool_event_id'] = ev['tool_event_id']
 
     id_token = make_id_token(
         private_pem=config['private_key_pem'],
@@ -769,20 +811,26 @@ def ags_scores(lineitem_id):
     timestamp         = data.get('timestamp', '')
     if not timestamp:
         return jsonify({'error': 'Missing timestamp'}), 400
+    # tool_event_id: prefer Tool's explicit submissionId; fall back to timestamp string.
+    # This value is stored and echoed back in SR launches via custom.tool_event_id so
+    # the Tool can locate the exact attempt row without any LMS‑side ID mapping.
+    tool_event_id = (data.get('submissionId') or '').strip() or timestamp
+    if len(tool_event_id) > 64:
+        return jsonify({'error': 'submissionId exceeds 64 characters'}), 400
 
-    # Idempotency: (lineitem_id, user_id, timestamp) is unique.
+    # Idempotency: (lineitem_id, user_id, tool_event_id) is unique.
     existing = db.execute(
-        'SELECT 1 FROM score_events WHERE lineitem_id=? AND user_id=? AND timestamp=?',
-        [lineitem_id, user_id, timestamp]
+        'SELECT 1 FROM score_events WHERE lineitem_id=? AND user_id=? AND tool_event_id=?',
+        [lineitem_id, user_id, tool_event_id]
     ).fetchone()
     if not existing:
         db.execute(
             'INSERT INTO score_events '
             '(lineitem_id, user_id, score_given, score_maximum, '
-            ' activity_progress, grading_progress, timestamp) '
-            'VALUES (?, ?, ?, ?, ?, ?, ?)',
+            ' activity_progress, grading_progress, timestamp, tool_event_id) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [lineitem_id, user_id, score_given, score_maximum,
-             activity_progress, grading_progress, timestamp]
+             activity_progress, grading_progress, timestamp, tool_event_id]
         )
         db.commit()
 

@@ -17,6 +17,7 @@
   "result_sync_status": "成绩同步状态",
   "result_sync_success": "成绩已实时同步至学习平台 (LMS)",
   "result_sync_offline": "本地测试模式 (未回传平台成绩)",
+  "submit_at": "提交时间",
   "back_to_lms": "返回学习平台 (LMS)",
   "need_dl_title": "活动未关联分类",
   "need_dl_subtitle": "你好，<strong>{name}</strong>。本活动尚未配置题集分类。",

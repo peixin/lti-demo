@@ -142,8 +142,17 @@ def py_t(key, **kwargs):
 def set_lang(lang):
     if lang in TRANSLATIONS:
         session['lang'] = lang
-    next_page = request.referrer or url_for('exam')
-    return redirect(next_page)
+    # Use explicit `next` param instead of request.referrer.
+    # In iframe mode, referrer is the parent (LMS) page URL, which would
+    # navigate the iframe away from the Tool and may return 405 / auth errors.
+    next_page = request.args.get('next') or url_for('exam')
+    # Safety: only allow relative paths to prevent open-redirect.
+    if next_page.startswith('http'):
+        next_page = url_for('exam')
+    # Append ?lang= so the language persists even if the session cookie is
+    # blocked by the browser's SameSite policy inside a cross-origin iframe.
+    sep = '&' if '?' in next_page else '?'
+    return redirect(f'{next_page}{sep}lang={lang}')
 
 @app.context_processor
 def inject_translations():
@@ -411,7 +420,7 @@ def handle_resource_link(claims):
     )
     db.commit()
     session['lti_session_id'] = sess_id
-    return redirect(url_for('exam'))
+    return redirect(url_for('exam', lti_session_id=sess_id))
 
 
 # ── SubmissionReviewRequest: read-only review of a user's attempt ────────────
@@ -427,19 +436,32 @@ def handle_submission_review(claims):
     target_name      = for_user.get('name') or claims.get('name', '同学')
     resource_link_id = rl.get('id', '')
 
-    # custom.event_id (when provided) points at one specific attempt; otherwise
-    # show the user's most-recent attempt across all sessions for this activity
-    # (per §4.3 of the integration guide — Tool may ignore event_id and default
-    # to latest).
-    event_id = custom.get('event_id')
+    # Three-level lookup strategy for tool_event_id:
+    #
+    # Level 1 — new data (after fix): submissionId = sess_id (UUID)
+    #   tool_event_id == session_id → direct match on attempts.session_id
+    #
+    # Level 2 — old data (before fix): platform had no submissionId, fell back
+    #   to storing timestamp as tool_event_id → match on attempts.timestamp
+    #
+    # Level 3 — nothing found: show the user's most-recent attempt for the activity
+    tool_event_id = custom.get('tool_event_id')
     attempt = None
-    if event_id:
+    if tool_event_id:
+        # Level 1: tool_event_id == session_id (UUID)
+        attempt = db.execute(
+            'SELECT * FROM attempts WHERE session_id=? ORDER BY id DESC LIMIT 1',
+            [tool_event_id]
+        ).fetchone()
+    if not attempt and tool_event_id:
+        # Level 2: tool_event_id == timestamp (old fallback)
         attempt = db.execute(
             'SELECT a.* FROM attempts a JOIN lti_sessions s ON a.session_id=s.session_id '
-            'WHERE a.id=? AND s.sub=? AND s.resource_link_id=?',
-            [event_id, target_sub, resource_link_id]
+            'WHERE a.timestamp=? AND s.sub=? AND s.resource_link_id=?',
+            [tool_event_id, target_sub, resource_link_id]
         ).fetchone()
     if not attempt:
+        # Level 3: show most-recent attempt for this user × activity
         attempt = db.execute(
             'SELECT a.* FROM attempts a JOIN lti_sessions s ON a.session_id=s.session_id '
             'WHERE s.sub=? AND s.resource_link_id=? ORDER BY a.id DESC LIMIT 1',
@@ -448,6 +470,25 @@ def handle_submission_review(claims):
     if not attempt:
         return render_template('error.html',
             message=py_t('no_submission', name=target_name)), 404
+
+    # Redirect to a stable GET URL so the browser's address bar shows a
+    # navigable path. This prevents the lang-switcher from sending users
+    # back to /lti/launch (a POST-only endpoint) and getting a 405.
+    return_url = lp.get('return_url') or ''
+    return redirect(url_for('exam_review',
+                            attempt_id=attempt['id'],
+                            user_name=target_name,
+                            return_url=return_url))
+
+
+# ── Submission Review: stable GET endpoint ───────────────────────────────────
+
+@app.route('/exam/review/<int:attempt_id>')
+def exam_review(attempt_id):
+    db      = get_db()
+    attempt = db.execute('SELECT * FROM attempts WHERE id=?', [attempt_id]).fetchone()
+    if not attempt:
+        return render_template('error.html', message=py_t('no_submission', name='?')), 404
 
     rows    = db.execute(
         'SELECT * FROM questions WHERE category=? ORDER BY id', [attempt['category']]
@@ -464,13 +505,14 @@ def handle_submission_review(claims):
     score = (attempt['score_given'] / attempt['score_maximum']
              if attempt['score_maximum'] else 0)
     return render_template('detail.html',
-                           user_name=target_name,
+                           user_name=request.args.get('user_name', ''),
                            category=attempt['category'],
                            score=score,
                            score_given=attempt['score_given'],
                            score_maximum=attempt['score_maximum'],
                            questions=questions,
-                           return_url=lp.get('return_url'))
+                           return_url=request.args.get('return_url', ''),
+                           submitted_at=attempt['submitted_at'])
 
 
 # ── DeepLinkingRequest: teacher picks a question category ────────────────────
@@ -538,7 +580,7 @@ def deeplink_submit():
 
 @app.route('/exam')
 def exam():
-    sess_id = session.get('lti_session_id')
+    sess_id = request.args.get('lti_session_id') or session.get('lti_session_id')
     if not sess_id:
         return render_template('error.html',
             message=py_t('no_session'))
@@ -564,12 +606,13 @@ def exam():
     return render_template('exam.html',
                            user_name=lti_sess['user_name'],
                            category=category,
-                           questions=questions)
+                           questions=questions,
+                           lti_session_id=sess_id)
 
 
 @app.route('/exam/submit', methods=['POST'])
 def submit_exam():
-    sess_id = session.get('lti_session_id')
+    sess_id = request.args.get('lti_session_id') or request.form.get('lti_session_id') or session.get('lti_session_id')
     if not sess_id:
         return render_template('error.html', message=py_t('no_session'))
     db        = get_db()
@@ -610,21 +653,25 @@ def submit_exam():
                                      config['private_key_pem'],
                                      config['kid'], config['client_id'])
             # Raw scale (Tool's own grading scheme); LMS normalizes internally.
+            # Use sess_id (UUID) as submissionId: unique, stable, and directly
+            # maps to attempts.session_id — so SR lookup is a simple
+            # WHERE session_id = tool_event_id with no JOIN needed.
             post_score(token, lti_sess['lineitem_url'], lti_sess['sub'],
                        score_given=score_given,
                        score_maximum=score_maximum,
                        timestamp=timestamp,
                        activity_progress='Completed',
-                       grading_progress='FullyGraded')
+                       grading_progress='FullyGraded',
+                       submission_id=sess_id)
         except Exception as e:
             app.logger.warning('AGS score callback failed: %s', e)
 
-    return redirect(url_for('result'))
+    return redirect(url_for('result', lti_session_id=sess_id))
 
 
 @app.route('/result')
 def result():
-    sess_id = session.get('lti_session_id')
+    sess_id = request.args.get('lti_session_id') or session.get('lti_session_id')
     if not sess_id:
         return render_template('error.html', message=py_t('no_session'))
     db       = get_db()
@@ -643,7 +690,8 @@ def result():
                            category=attempt['category'],
                            user_name=lti_sess['user_name'],
                            ags_enabled=bool(lti_sess['lineitem_url']),
-                           return_url=lti_sess['return_url'])
+                           return_url=lti_sess['return_url'],
+                           submitted_at=attempt['submitted_at'])
 
 
 if __name__ == '__main__':

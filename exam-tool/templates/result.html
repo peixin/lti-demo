@@ -150,9 +150,14 @@
   <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.5rem;">
     🏆 {{ t('result_title') }}
   </h1>
-  <p class="subtitle is-6" style="color:var(--text-muted);">
+  <p class="subtitle is-6" style="color:var(--text-muted); margin-bottom: 0.5rem;">
     {{ t('result_subtitle', name=user_name) | safe }}
   </p>
+  {% if submitted_at %}
+  <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 1.5rem; font-weight: 550; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+    📅 {{ t('submit_at') }}: <span class="local-time" data-utc="{{ submitted_at }}">{{ submitted_at }}</span>
+  </p>
+  {% endif %}
 
   <!-- SVG Circular Score Gauge -->
   <div class="gauge-container">

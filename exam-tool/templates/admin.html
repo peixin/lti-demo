@@ -264,58 +264,38 @@ function toggleAccordion(id) {
   </div>
 </div>
 
-<!-- Attempts -->
+<!-- Attempts → link to dedicated page -->
 <div class="admin-section-box mt-4">
-  <h2 class="admin-section-title">📝 {{ t('exam_attempts_logs') }}</h2>
-  
-  {% if attempts %}
-    {% for a in attempts %}
-    <div class="attempt-card">
-      <div class="attempt-header" onclick="toggleAccordion('d{{ loop.index }}')">
-        <div>
-          <span style="font-weight:700; font-size:0.92rem; color:var(--text-main);">{{ a.user_name }}</span>
-          <span class="tag ml-2 is-light" style="font-weight:600; font-size:0.75rem;">{{ categories[a.category].emoji }} {{ t('cat_' + a.category) }}</span>
-          <span class="tag ml-2 {% if a.pct >= 0.6 %}is-success{% else %}is-danger{% endif %} is-light" style="font-weight:700; font-size:0.75rem;">
-            {{ "%g"|format(a.score_given) }} / {{ "%g"|format(a.score_maximum) }}
-            ({{ "%.0f"|format(a.pct * 100) }}%)
-          </span>
-        </div>
-        <div style="display:flex; align-items:center; gap:0.50rem;">
-          <span class="local-time" data-utc="{{ a.submitted_at }}" style="font-size:0.75rem; color:var(--text-muted); font-weight:550;">{{ a.submitted_at[:16] }}</span>
-          <span style="font-size:0.75rem; color:var(--text-muted);">▾</span>
-        </div>
-      </div>
-      
-      <div id="d{{ loop.index }}" class="attempt-content">
-        <table class="table-custom">
-          <thead>
-            <tr>
-              <th style="width:5%;">#</th>
-              <th style="width:55%;">{{ t('table_q') }}</th>
-              <th style="width:20%;">{{ t('table_user_ans') }}</th>
-              <th style="width:20%;">{{ t('table_correct_ans') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for d in a.detail %}
-            <tr>
-              <td style="font-weight:bold; color:var(--text-muted);">{{ loop.index }}</td>
-              <td>{{ t(d.text) }}</td>
-              <td class="{% if d.chosen == d.correct %}has-text-success{% else %}has-text-danger{% endif %}" style="font-weight:600;">
-                {% if d.chosen >= 0 %}{{ t(d.options[d.chosen]) }}{% else %}—{% endif %}
-              </td>
-              <td class="has-text-success" style="font-weight:600;">{{ t(d.options[d.correct]) }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <h2 class="admin-section-title" style="margin-bottom:0;">📝 {{ t('exam_attempts_logs') }}</h2>
+    <a href="/admin/attempts" class="btn-primary-gradient"
+       style="border-radius:var(--radius-sm) !important; padding:0.45rem 1.25rem !important; font-size:0.82rem !important; font-weight:700 !important; text-decoration:none;">
+      📋 {{ t('view_all_attempts') }} →
+    </a>
+  </div>
+
+  <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+    <div style="background:#f8fafc; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0.85rem 1.5rem; text-align:center; min-width:120px;">
+      <div style="font-size:1.75rem; font-weight:800; color:var(--primary);">{{ attempts|length }}</div>
+      <div style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:0.2rem;">{{ t('total_attempts') }}</div>
     </div>
-    {% endfor %}
-  {% else %}
-    <p style="font-size:0.85rem; color:var(--text-muted); font-weight:550; text-align:center; padding:1rem 0;">{{ t('no_attempts') }}</p>
+    {% set passing = attempts | selectattr('pct', 'ge', 0.6) | list %}
+    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:var(--radius-sm); padding:0.85rem 1.5rem; text-align:center; min-width:120px;">
+      <div style="font-size:1.75rem; font-weight:800; color:#16a34a;">{{ passing|length }}</div>
+      <div style="font-size:0.78rem; color:#15803d; font-weight:600; margin-top:0.2rem;">{{ t('attempts_passed') }}</div>
+    </div>
+    {% set failing = attempts | rejectattr('pct', 'ge', 0.6) | list %}
+    <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:var(--radius-sm); padding:0.85rem 1.5rem; text-align:center; min-width:120px;">
+      <div style="font-size:1.75rem; font-weight:800; color:#dc2626;">{{ failing|length }}</div>
+      <div style="font-size:0.78rem; color:#b91c1c; font-weight:600; margin-top:0.2rem;">{{ t('attempts_failed') }}</div>
+    </div>
+  </div>
+
+  {% if not attempts %}
+  <p style="font-size:0.85rem; color:var(--text-muted); font-weight:550; text-align:center; padding:1rem 0; margin-top:1rem;">{{ t('no_attempts') }}</p>
   {% endif %}
 </div>
+
 
 <!-- Questions by category -->
 <div class="admin-section-box mt-4">

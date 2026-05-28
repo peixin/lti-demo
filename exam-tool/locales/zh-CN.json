@@ -79,5 +79,25 @@
   
   "art": "艺术",
   "cs": "计算机",
-  "history": "历史"
+  "history": "历史",
+  "view_all_attempts": "查看全部记录",
+  "total_attempts": "总提交数",
+  "attempts_passed": "通过",
+  "attempts_failed": "未通过",
+  "attempts_deleted": "已成功删除 {count} 条记录",
+  "attempts_page_title": "学生测评记录",
+  "search_by_name": "按姓名搜索",
+  "all_categories": "全部科目",
+  "select_to_delete": "删除选中",
+  "select_all_page": "全选本页",
+  "no_records_found": "没有符合条件的记录",
+  "showing_records": "共 {total} 条记录",
+  "back_to_admin": "返回后台",
+  "search_btn": "筛选",
+  "reset_btn": "重置",
+  "student_name": "学生姓名",
+  "exam_category": "科目",
+  "score": "得分",
+  "correct_rate": "正确率",
+  "action": "操作"
 }

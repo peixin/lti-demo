@@ -196,6 +196,8 @@ def get_db():
     if "db" not in g:
         g.db = sqlite3.connect(DATABASE)
         g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA journal_mode=WAL")
+        g.db.execute("PRAGMA synchronous=NORMAL")
     return g.db
 
 
@@ -349,6 +351,85 @@ def admin():
         qs_by_category=qs_by_category,
         tool_info=tool_info,
     )
+
+
+@app.route("/admin/attempts")
+def admin_attempts():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+
+    db = get_db()
+
+    # ── Query params ──────────────────────────────────────────────────────────
+    q_name     = request.args.get("name", "").strip()
+    q_category = request.args.get("category", "").strip()
+    page       = max(1, int(request.args.get("page", 1)))
+    per_page   = 20
+
+    # ── Build WHERE clause ────────────────────────────────────────────────────
+    where_parts = []
+    params: list = []
+    if q_name:
+        where_parts.append("s.user_name LIKE ?")
+        params.append(f"%{q_name}%")
+    if q_category and q_category in CATEGORIES:
+        where_parts.append("a.category = ?")
+        params.append(q_category)
+
+    where_sql = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+
+    base_sql = (
+        "FROM attempts a JOIN lti_sessions s ON a.session_id=s.session_id "
+        + where_sql
+    )
+
+    total = db.execute("SELECT COUNT(*) " + base_sql, params).fetchone()[0]
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+
+    rows = db.execute(
+        "SELECT a.id, a.category, a.score_given, a.score_maximum, "
+        "       a.submitted_at, s.user_name, s.resource_link_id "
+        + base_sql
+        + " ORDER BY a.submitted_at DESC LIMIT ? OFFSET ?",
+        params + [per_page, offset],
+    ).fetchall()
+
+    attempts = []
+    for a in rows:
+        pct = (a["score_given"] / a["score_maximum"]) if a["score_maximum"] else 0
+        attempts.append({**dict(a), "pct": pct})
+
+    return render_template(
+        "admin_attempts.html",
+        attempts=attempts,
+        categories=CATEGORIES,
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
+        q_name=q_name,
+        q_category=q_category,
+    )
+
+
+@app.route("/admin/attempts/delete", methods=["POST"])
+def admin_attempts_delete():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+
+    ids = request.form.getlist("ids")
+    if ids:
+        db = get_db()
+        placeholders = ",".join("?" * len(ids))
+        db.execute(f"DELETE FROM attempts WHERE id IN ({placeholders})", ids)
+        db.commit()
+        flash(py_t("attempts_deleted", count=len(ids)), "success")
+
+    # Preserve search params when redirecting back
+    back = request.form.get("back_url", url_for("admin_attempts"))
+    return redirect(back)
 
 
 # ── Tool JWKS ─────────────────────────────────────────────────────────────────

@@ -1,0 +1,473 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+  .attempts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .admin-section-box {
+    background-color: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex-grow: 1;
+    min-width: 200px;
+  }
+
+  .filter-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .input-custom {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 0.45rem 0.75rem;
+    font-size: 0.85rem;
+    width: 100%;
+    height: 38px;
+    background-color: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-custom:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+  }
+
+  .table-custom {
+    width: 100%;
+    font-size: 0.82rem;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .table-custom th {
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 0.85rem 1rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    background-color: #fafbfc;
+  }
+
+  .table-custom td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+    vertical-align: middle;
+  }
+
+  .table-custom tbody tr:hover {
+    background-color: #f8fafc;
+  }
+
+  .table-custom tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* Custom Checkbox Styling */
+  .checkbox-custom {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .checkbox-custom input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+  }
+
+  .checkmark {
+    position: relative;
+    height: 18px;
+    width: 18px;
+    background-color: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    margin-right: 0.25rem;
+  }
+
+  .checkbox-custom:hover input ~ .checkmark {
+    border-color: var(--primary);
+  }
+
+  .checkbox-custom input:checked ~ .checkmark {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+  }
+
+  .checkbox-custom input:checked ~ .checkmark:after {
+    display: block;
+  }
+
+  .checkbox-custom .checkmark:after {
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .pagination-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  .pagination-custom {
+    display: inline-flex;
+    gap: 0.25rem;
+  }
+
+  .page-link-custom {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text-main);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    transition: all 0.15s ease;
+  }
+
+  .page-link-custom:hover {
+    border-color: var(--text-muted);
+    background: #f8fafc;
+  }
+
+  .page-link-custom.is-active {
+    background: var(--primary-gradient);
+    border-color: transparent;
+    color: white !important;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+  }
+
+  .page-link-custom.is-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background: #f1f5f9;
+  }
+
+  /* Empty state styles */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @media (max-width: 768px) {
+    .filter-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .filter-item {
+      width: 100%;
+    }
+    .action-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .action-bar div {
+      text-align: center;
+    }
+  }
+</style>
+
+<div class="attempts-header">
+  <div>
+    <h1 class="title is-3" style="font-weight:800; color:var(--text-main); margin-bottom:0.25rem;">
+      📋 {{ t('attempts_page_title') }}
+    </h1>
+    <span class="badge-info">{{ t('tool_capability') }}</span>
+  </div>
+  <div>
+    <a class="button is-light is-small" style="font-weight:600; border-radius:var(--radius-sm)" href="/admin">
+      🔙 {{ t('back_to_admin') }}
+    </a>
+  </div>
+</div>
+
+<!-- Search filters -->
+<div class="admin-section-box">
+  <form method="GET" action="/admin/attempts">
+    <div class="filter-bar">
+      <div class="filter-item">
+        <label class="filter-label">👤 {{ t('student_name') }}</label>
+        <input class="input-custom" type="text" name="name" value="{{ q_name }}" placeholder="{{ t('search_by_name') }}">
+      </div>
+      <div class="filter-item">
+        <label class="filter-label">📚 {{ t('exam_category') }}</label>
+        <div class="select" style="width:100%; height:38px;">
+          <select class="input-custom" name="category" style="width:100%;">
+            <option value="">✨ {{ t('all_categories') }}</option>
+            {% for key, info in categories.items() %}
+              <option value="{{ key }}" {% if q_category == key %}selected{% endif %}>
+                {{ t('cat_' + key) }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="display:flex; gap:0.5rem; flex-shrink:0;">
+        <button type="submit" class="btn-primary-gradient" style="height:38px !important; border-radius:var(--radius-sm) !important; padding:0 1.25rem !important;">
+          🔍 {{ t('search_btn') }}
+        </button>
+        <a href="/admin/attempts" class="button is-light" style="height:38px; border-radius:var(--radius-sm); font-weight:600; font-size:0.85rem; display:inline-flex; align-items:center; justify-content:center; padding:0 1.25rem;">
+          🔄 {{ t('reset_btn') }}
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Results and Batch delete -->
+<form id="deleteForm" method="POST" action="/admin/attempts/delete" onsubmit="return confirmDelete(event)">
+  <input type="hidden" name="back_url" id="backUrlInput">
+
+  <div class="admin-section-box">
+    {% if attempts %}
+      <div class="action-bar">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <label class="checkbox-custom" style="font-weight:600; font-size:0.85rem; margin-bottom:0;">
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+            <span class="checkmark"></span>
+            {{ t('select_all_page') }}
+          </label>
+          
+          <button type="submit" id="deleteBtn" class="button is-danger is-small" style="font-weight:700; border-radius:var(--radius-sm); transition:all 0.2s;" disabled>
+            🗑️ {{ t('select_to_delete') }} <span id="deleteCount" style="margin-left:0.25rem;"></span>
+          </button>
+        </div>
+        <div>
+          <span class="tag is-info is-light" style="font-weight:700; border-radius:var(--radius-sm);">
+            📊 {{ t('showing_records', total=total) }}
+          </span>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="table-custom">
+          <thead>
+            <tr>
+              <th style="width:40px;"></th>
+              <th style="width:60px;">#</th>
+              <th>🧑‍🎓 {{ t('student_name') }}</th>
+              <th>📚 {{ t('exam_category') }}</th>
+              <th>🎯 {{ t('score') }}</th>
+              <th>📈 {{ t('correct_rate') }}</th>
+              <th>📅 {{ t('submit_at') }}</th>
+              <th style="width:100px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in attempts %}
+              <tr>
+                <td>
+                  <label class="checkbox-custom">
+                    <input type="checkbox" name="ids" value="{{ a.id }}" onchange="updateDeleteState()">
+                    <span class="checkmark"></span>
+                  </label>
+                </td>
+                <td style="font-weight:600; color:var(--text-muted);">
+                  {{ (page - 1) * per_page + loop.index }}
+                </td>
+                <td style="font-weight:700; color:var(--text-main);">
+                  {{ a.user_name }}
+                </td>
+                <td>
+                  {% set cat_info = categories.get(a.category, {}) %}
+                  <span class="tag is-light" style="font-weight:600; border-radius:var(--radius-sm);">
+                    {{ cat_info.emoji }} {{ t('cat_' + a.category) }}
+                  </span>
+                </td>
+                <td style="font-weight:600;">
+                  {{ a.score_given }} / {{ a.score_maximum }}
+                </td>
+                <td>
+                  {% set is_passed = a.pct >= 0.6 %}
+                  <span class="tag {% if is_passed %}is-success{% else %}is-danger{% endif %} is-light" style="font-weight:700; border-radius:var(--radius-sm);">
+                    {{ (a.pct * 100)|round(1) }}% ({% if is_passed %}{{ t('attempts_passed') }}{% else %}{{ t('attempts_failed') }}{% endif %})
+                  </span>
+                </td>
+                <td>
+                  <span class="local-time" data-utc="{{ a.submitted_at }}" style="font-weight:550; color:var(--text-muted);">
+                    {{ a.submitted_at }}
+                  </span>
+                </td>
+                <td>
+                  <a class="button is-small is-link is-light" style="font-weight:700; border-radius:var(--radius-sm);" href="/exam/review/{{ a.id }}?user_name={{ a.user_name | urlencode }}">
+                    🔍 {{ t('table_result') }}
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if total_pages > 1 %}
+        <div class="pagination-container">
+          <div class="pagination-custom">
+            <!-- Prev page -->
+            <a href="/admin/attempts?name={{ q_name }}&category={{ q_category }}&page={{ page - 1 }}" 
+               class="page-link-custom {% if page == 1 %}is-disabled{% endif %}">
+              ‹
+            </a>
+
+            <!-- Page numbers -->
+            {% for p in range(1, total_pages + 1) %}
+              <a href="/admin/attempts?name={{ q_name }}&category={{ q_category }}&page={{ p }}" 
+                 class="page-link-custom {% if page == p %}is-active{% endif %}">
+                {{ p }}
+              </a>
+            {% endfor %}
+
+            <!-- Next page -->
+            <a href="/admin/attempts?name={{ q_name }}&category={{ q_category }}&page={{ page + 1 }}" 
+               class="page-link-custom {% if page == total_pages %}is-disabled{% endif %}">
+              ›
+            </a>
+          </div>
+        </div>
+      {% endif %}
+
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p style="font-size:1.1rem; color:var(--text-main); font-weight:700; margin-bottom:0.5rem;">
+          {{ t('no_records_found') }}
+        </p>
+        <p style="font-size:0.85rem; color:var(--text-muted); font-weight:500;">
+          {{ t('no_attempts') }}
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</form>
+
+<script>
+  // Set the back_url for redirected actions (e.g. deletion redirecting back with search queries intact)
+  document.addEventListener('DOMContentLoaded', function() {
+    const backUrlInput = document.getElementById('backUrlInput');
+    if (backUrlInput) {
+      backUrlInput.value = window.location.pathname + window.location.search;
+    }
+  });
+
+  function toggleSelectAll(master) {
+    const checkboxes = document.querySelectorAll('input[name="ids"]');
+    checkboxes.forEach(cb => {
+      cb.checked = master.checked;
+    });
+    updateDeleteState();
+  }
+
+  function updateDeleteState() {
+    const checkboxes = document.querySelectorAll('input[name="ids"]');
+    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+    const deleteBtn = document.getElementById('deleteBtn');
+    const deleteCount = document.getElementById('deleteCount');
+    const selectAll = document.getElementById('selectAll');
+
+    if (deleteBtn) {
+      if (checkedCount > 0) {
+        deleteBtn.disabled = false;
+        deleteBtn.classList.remove('is-light');
+        if (deleteCount) deleteCount.textContent = `(${checkedCount})`;
+      } else {
+        deleteBtn.disabled = true;
+        if (deleteCount) deleteCount.textContent = '';
+      }
+    }
+
+    if (selectAll) {
+      selectAll.checked = (checkboxes.length > 0 && checkedCount === checkboxes.length);
+    }
+  }
+
+  function confirmDelete(event) {
+    const checkboxes = document.querySelectorAll('input[name="ids"]');
+    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+    if (checkedCount === 0) return false;
+    
+    // Multi-language friendly prompt message
+    let confirmMsg = "确定要删除选中的 " + checkedCount + " 条记录吗？此操作无法撤销。";
+    {% if current_lang == 'en' %}
+      confirmMsg = "Are you sure you want to delete the " + checkedCount + " selected records? This action cannot be undone.";
+    {% elif current_lang == 'zh-TW' %}
+      confirmMsg = "確定要刪除選中的 " + checkedCount + " 條記錄嗎？此操作無法撤銷。";
+    {% elif current_lang == 'ko' %}
+      confirmMsg = "선택한 " + checkedCount + "개의 기록을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.";
+    {% endif %}
+
+    if (!confirm(confirmMsg)) {
+      event.preventDefault();
+      return false;
+    }
+    return true;
+  }
+</script>
+
+{% endblock %}

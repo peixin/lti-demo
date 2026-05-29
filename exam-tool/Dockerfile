@@ -1,6 +1,10 @@
 # 使用官方 Python 3.12 基础镜像
 FROM python:3.12-slim
 
+# 接收构建时传入的版本号，并设置为容器内的环境变量
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+
 # 设置工作目录
 WORKDIR /app
 

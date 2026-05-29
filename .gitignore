@@ -669,3 +669,4 @@ $RECYCLE.BIN/
 exam-tool/data
 exam-tool/lti-tool-deploy
 platform/data
+push_image.sh

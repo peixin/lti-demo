@@ -27,7 +27,10 @@ from lti import (
     verify_tool_jwt,
 )
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", "platform-demo-secret-change-in-prod")
 app.permanent_session_lifetime = timedelta(days=7)
 app.config["SESSION_COOKIE_NAME"] = "platform_session"
@@ -289,11 +292,12 @@ def login_required(f):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        username = request.form.get("username", "").strip()
         user = (
             get_db()
             .execute(
                 "SELECT * FROM users WHERE username=? AND password_hash=?",
-                [request.form["username"], hash_pw(request.form["password"])],
+                [username, hash_pw(request.form["password"])],
             )
             .fetchone()
         )
@@ -308,11 +312,12 @@ def login():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        username = request.form.get("username", "").strip()
         try:
             db = get_db()
             db.execute(
                 "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                [request.form["username"], hash_pw(request.form["password"])],
+                [username, hash_pw(request.form["password"])],
             )
             db.commit()
             flash(py_t("registered_success"), "success")
@@ -392,7 +397,7 @@ def add_course():
     db = get_db()
     db.execute(
         "INSERT INTO courses (name, teacher_id) VALUES (?, ?)",
-        [request.form["name"], session["user_id"]],
+        [request.form.get("name", "").strip(), session["user_id"]],
     )
     db.commit()
     return redirect(url_for("index"))
@@ -450,7 +455,7 @@ def add_activity(course_id):
         [
             course_id,
             request.form["tool_id"],
-            request.form["name"],
+            request.form.get("name", "").strip(),
             "rl_" + uuid.uuid4().hex,
         ],
     )

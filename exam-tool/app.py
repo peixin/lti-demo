@@ -22,7 +22,10 @@ from lti import (
     verify_id_token,
 )
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", "exam-tool-demo-secret-change-in-prod")
 app.config["SESSION_COOKIE_NAME"] = "examtool_session"
 
@@ -284,12 +287,12 @@ def admin():
             "platform_oidc_auth_url=?, platform_jwks_url=?, platform_token_url=? "
             "WHERE id=1",
             [
-                request.form["platform_iss"],
-                request.form["client_id"],
-                request.form["deployment_id"],
-                request.form["platform_oidc_auth_url"],
-                request.form["platform_jwks_url"],
-                request.form["platform_token_url"],
+                request.form.get("platform_iss", "").strip(),
+                request.form.get("client_id", "").strip(),
+                request.form.get("deployment_id", "").strip(),
+                request.form.get("platform_oidc_auth_url", "").strip(),
+                request.form.get("platform_jwks_url", "").strip(),
+                request.form.get("platform_token_url", "").strip(),
             ],
         )
         db.commit()

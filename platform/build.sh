@@ -10,19 +10,16 @@ cd "$DIR"
 IMAGE_NAME="beiming/lti-platform"
 VERSION_FILE="$DIR/VERSION"
 
-# ── 读取并自动 bump patch 版本 ──────────────────────────────────────────────
+# ── 读取版本（不自动 bump，版本由人工维护 VERSION 文件）─────────────────────
 if [ ! -f "$VERSION_FILE" ]; then
-  echo "1.0.0" > "$VERSION_FILE"
+  echo "❌ 找不到 $VERSION_FILE，请先手动创建并写入版本号（如 1.0.0）"
+  exit 1
 fi
 
-CURRENT_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
-IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-PATCH=$((PATCH + 1))
-NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-echo "$NEW_VERSION" > "$VERSION_FILE"
+NEW_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
 
 echo "=================================================="
-echo "📦 版本: ${CURRENT_VERSION} → ${NEW_VERSION}"
+echo "📦 版本: ${NEW_VERSION}"
 echo "=================================================="
 
 # ── 构建镜像（同时打版本 tag 和 latest tag）────────────────────────────────

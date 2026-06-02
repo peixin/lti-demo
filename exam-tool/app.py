@@ -582,6 +582,9 @@ def handle_resource_link(claims):
         ],
     )
     db.commit()
+    # A learner/instructor arriving through LTI must not inherit a local admin
+    # login that may linger in this browser's session cookie.
+    session.pop("admin", None)
     session["lti_session_id"] = sess_id
     return redirect(url_for("exam", lti_session_id=sess_id))
 
@@ -870,7 +873,16 @@ def submit_exam():
                 submission_id=sess_id,
             )
         except Exception as e:
-            app.logger.warning("AGS score callback failed: %s", e)
+            # Surface the platform's actual response body — a bare
+            # "500 Server Error for url" hides WHY the platform rejected us.
+            resp = getattr(e, "response", None)
+            if resp is not None:
+                app.logger.warning(
+                    "AGS score callback failed: %s %s\nrequest_url=%s\nresponse_body=%s",
+                    resp.status_code, resp.reason, resp.url, resp.text,
+                )
+            else:
+                app.logger.warning("AGS score callback failed: %s", e)
 
     return redirect(url_for("result", lti_session_id=sess_id))
 

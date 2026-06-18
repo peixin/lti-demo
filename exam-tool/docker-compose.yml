@@ -16,4 +16,5 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      - "lxp.in.or.kr:20.249.112.254"
     restart: unless-stopped

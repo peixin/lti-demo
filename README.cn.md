@@ -35,6 +35,23 @@
 ---
 
 ### 🚀 快速启动指南
+本地开发使用 Python 3.12（已在 `mise.toml` 和 `.python-version` 中配置）与 uv。在仓库根目录执行：
+
+```bash
+mise install
+uv sync --locked
+mkdir -p platform/data exam-tool/data
+```
+
+这会在仓库根目录创建 `.venv`，通过 `pyproject.toml` 中配置的阿里云 PyPI 镜像安装 `uv.lock` 中锁定的依赖。在两个终端中分别启动服务：
+
+```bash
+just platform   # http://localhost:8001
+just exam-tool  # http://localhost:8002
+```
+
+也可以分别执行 `(cd platform && uv run --locked python app.py)` 和 `(cd exam-tool && uv run --locked python app.py)`。日常使用 `uv add <包名>` / `uv remove <包名>` 管理依赖，并一同提交 `pyproject.toml` 与 `uv.lock`。独立 Docker 构建继续使用各服务目录中的 `requirements.txt`。
+
 如需获取这两个独立服务的具体配置与启动细节，请参阅它们各自目录下的说明文档：
 
 * 🏫 **平台端服务（LMS Platform）**：前往 [platform/README.cn.md](platform/README.cn.md) 了解如何管理用户、课程和注册对接 LTI 工具。

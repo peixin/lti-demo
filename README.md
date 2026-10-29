@@ -35,6 +35,23 @@ Both services have been fully containerized and decoupled as **two separate stan
 ---
 
 ### 🚀 Quick Start Guides
+For local development, use Python 3.12 (configured in `mise.toml` and `.python-version`) and uv. From the repository root:
+
+```bash
+mise install
+uv sync --locked
+mkdir -p platform/data exam-tool/data
+```
+
+This creates `.venv` in the repository root and installs the versions in `uv.lock` using the Aliyun PyPI mirror configured in `pyproject.toml`. Start each service in a separate terminal:
+
+```bash
+just platform   # http://localhost:8001
+just exam-tool  # http://localhost:8002
+```
+
+Alternatively, run `(cd platform && uv run --locked python app.py)` and `(cd exam-tool && uv run --locked python app.py)`. Use `uv add <package>` / `uv remove <package>` to manage dependencies and commit both `pyproject.toml` and `uv.lock`. The standalone Docker builds continue to use each service's `requirements.txt`.
+
 For detailed setup and execution instructions of each individual service, please refer to their respective READMEs:
 
 * 🏫 **LMS Platform Service**: Go to [platform/README.md](platform/README.md) to manage users, courses, and tool registrations.

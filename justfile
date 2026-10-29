@@ -1,14 +1,14 @@
 install:
-    poetry install
+    uv sync --locked
 
 platform:
-    cd platform && poetry run python app.py
+    cd platform && uv run --locked python app.py
 
 exam-tool:
-    cd exam-tool && poetry run python app.py
+    cd exam-tool && uv run --locked python app.py
 
 dev:
     #!/usr/bin/env bash
-    (cd platform && poetry run python app.py) &
-    (cd exam-tool && poetry run python app.py) &
+    (cd platform && uv run --locked python app.py) &
+    (cd exam-tool && uv run --locked python app.py) &
     wait

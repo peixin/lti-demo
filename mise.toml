@@ -1,2 +1,6 @@
 [tools]
 python = "3.12"
+
+[env]
+LTI_PLATFORM_PORT = "9005"
+LTI_EXAM_TOOL_PORT = "9006"

@@ -43,14 +43,14 @@ uv sync --locked
 mkdir -p platform/data exam-tool/data
 ```
 
-This creates `.venv` in the repository root and installs the versions in `uv.lock` using the Aliyun PyPI mirror configured in `pyproject.toml`. Start each service in a separate terminal:
+This creates `.venv` in the repository root and installs the versions in `uv.lock` using the Aliyun PyPI mirror configured in `pyproject.toml`. With mise activated, the development ports are configured in `mise.toml`. Start both services with `just dev` and stop them with Ctrl+C, or start each service in a separate terminal:
 
 ```bash
-just platform   # http://localhost:8001
-just exam-tool  # http://localhost:8002
+just platform   # http://localhost:9005
+just exam-tool  # http://localhost:9006
 ```
 
-Alternatively, run `(cd platform && uv run --locked python app.py)` and `(cd exam-tool && uv run --locked python app.py)`. Use `uv add <package>` / `uv remove <package>` to manage dependencies and commit both `pyproject.toml` and `uv.lock`. The standalone Docker builds continue to use each service's `requirements.txt`.
+Without mise shell activation, use `mise exec -- just dev` to load the configured ports. Use `uv add <package>` / `uv remove <package>` to manage dependencies and commit both `pyproject.toml` and `uv.lock`. The standalone Docker builds continue to use each service's `requirements.txt`.
 
 For detailed setup and execution instructions of each individual service, please refer to their respective READMEs:
 

@@ -43,14 +43,14 @@ uv sync --locked
 mkdir -p platform/data exam-tool/data
 ```
 
-这会在仓库根目录创建 `.venv`，通过 `pyproject.toml` 中配置的阿里云 PyPI 镜像安装 `uv.lock` 中锁定的依赖。在两个终端中分别启动服务：
+这会在仓库根目录创建 `.venv`，通过 `pyproject.toml` 中配置的阿里云 PyPI 镜像安装 `uv.lock` 中锁定的依赖。启用 mise 后，本地开发端口由 `mise.toml` 配置。使用 `just dev` 同时启动两个服务，按 Ctrl+C 停止；也可以在两个终端中分别启动：
 
 ```bash
-just platform   # http://localhost:8001
-just exam-tool  # http://localhost:8002
+just platform   # http://localhost:9005
+just exam-tool  # http://localhost:9006
 ```
 
-也可以分别执行 `(cd platform && uv run --locked python app.py)` 和 `(cd exam-tool && uv run --locked python app.py)`。日常使用 `uv add <包名>` / `uv remove <包名>` 管理依赖，并一同提交 `pyproject.toml` 与 `uv.lock`。独立 Docker 构建继续使用各服务目录中的 `requirements.txt`。
+如果没有在 shell 中启用 mise，可使用 `mise exec -- just dev` 加载端口配置。日常使用 `uv add <包名>` / `uv remove <包名>` 管理依赖，并一同提交 `pyproject.toml` 与 `uv.lock`。独立 Docker 构建继续使用各服务目录中的 `requirements.txt`。
 
 如需获取这两个独立服务的具体配置与启动细节，请参阅它们各自目录下的说明文档：
 
